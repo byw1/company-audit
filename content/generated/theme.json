@@ -1,0 +1,14 @@
+{
+  "source": "domain",
+  "base": "#0779b2",
+  "light": {
+    "live": "#0079b3",
+    "liveInk": "#0470a5",
+    "liveContrast": "#ffffff"
+  },
+  "dark": {
+    "live": "#44a8e7",
+    "liveInk": "#44a8e7",
+    "liveContrast": "#0b0b0a"
+  }
+}

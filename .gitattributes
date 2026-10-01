@@ -1,0 +1,5 @@
+# Pulling template updates into an audit (see README → "Pulling template
+# improvements"): audit-specific files always keep the audit's version.
+# Requires once per clone:  git config merge.ours.driver true
+content/** merge=ours
+public/logos/** merge=ours
