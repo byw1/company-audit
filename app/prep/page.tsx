@@ -5,7 +5,7 @@ import NoteCard from "@/components/prep/NoteCard";
 import { CHAPTERS } from "@/lib/chapters";
 import { audit, requirementById, sourceById, sourceNumber } from "@/lib/content";
 import { TLink } from "@/lib/mode";
-import { prep, talkTrackByChapter } from "@/lib/prep/content";
+import { getPrep, talkTrackByChapter } from "@/lib/prep/content";
 import { getView } from "@/lib/view";
 
 export const metadata: Metadata = { title: "Prep" };
@@ -17,7 +17,9 @@ export const metadata: Metadata = { title: "Prep" };
 export default async function PrepPage() {
   const { share } = await getView();
   if (share) notFound();
-  const notes = talkTrackByChapter();
+  const prep = await getPrep();
+  if (!prep) notFound();
+  const notes = talkTrackByChapter(prep);
   const chapters = CHAPTERS.filter((c) => notes[c.id]?.length);
 
   return (

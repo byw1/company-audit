@@ -4,9 +4,12 @@
  * Must pass before any link is sent. CI runs it on every push.
  *
  * 1. Builds the site (skip with --no-build when a fresh build already exists).
- * 2. Starts it with a throwaway PREP_KEY.
- * 3. Derives probes from every string in content/prep.ts, minus anything that
- *    also appears in public content.
+ * 2. Starts it with a throwaway PREP_KEY and the PREP_SECRET that opens the
+ *    sealed prep. With no secret (CI without the repo secret), it seals your
+ *    content/prep.ts, or failing that the template's example, with a
+ *    throwaway secret for the run and puts the sealed file back afterwards.
+ * 3. Derives probes from every string in the prep, minus anything that also
+ *    appears in public content.
  * 4. Crawls every route in the share view (no cookie, and the ?share preview
  *    with the cookie) and checks, after normalising:
  *      - the raw server HTML (React's <!-- --> separators stripped, entities
@@ -19,29 +22,21 @@
  *    share preview and after ?prep=off; 200 with the key.
  * 6. Control: the same probes must be found in the prep view. If they aren't,
  *    the probes are dead and the test fails rather than passing silently.
- * 7. Warns when the git remote is a public GitHub repo: the gate protects the
- *    deployed site, not the source. content/prep.ts in a public repo is public.
+ * 7. Git hygiene: fails if content/prep.ts is tracked (repos are public; only
+ *    the sealed file belongs in git), warns if it's in the history.
  *
- * Flags: --no-build, --strict-private (fail instead of warn on a public repo),
- *        --verbose.
+ * Flags: --no-build, --verbose.
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import path from "node:path";
-import config from "@/content/audit.config";
-import company from "@/content/company";
-import competitors from "@/content/competitors";
-import fit from "@/content/fit";
-import ideas from "@/content/ideas";
-import prepRaw from "@/content/prep";
-import record from "@/content/public-record";
-import role from "@/content/role";
-import sources from "@/content/sources";
-import workflows from "@/content/workflows";
+import { isSealed, newSecret, seal, unseal } from "@/lib/prep/seal";
 import { parsePrep } from "@/lib/schema/prep";
-import { parsePublic } from "@/lib/schema/validate";
+import type { PublicAudit } from "@/lib/schema/public";
+import { loadPrepPlain, loadPublic, PREP_SEALED, readSealed } from "./lib/audit";
+import { envVar } from "./lib/env";
 
 const ROOT = process.cwd();
 const ARGS = new Set(process.argv.slice(2));
@@ -147,7 +142,7 @@ async function startServer(port: number): Promise<ChildProcess> {
   const bin = path.join(ROOT, "node_modules", ".bin", "next");
   const child = spawn(bin, ["start", "-p", String(port), "-H", "127.0.0.1"], {
     cwd: ROOT,
-    env: { ...process.env, PREP_KEY: KEY, NODE_ENV: "production", PORT: String(port) },
+    env: { ...process.env, PREP_KEY: KEY, PREP_SECRET: SECRET, NODE_ENV: "production", PORT: String(port) },
     stdio: VERBOSE ? "inherit" : "ignore",
   });
   const deadline = Date.now() + 60_000;
@@ -165,6 +160,7 @@ async function startServer(port: number): Promise<ChildProcess> {
 // ── HTTP helpers ─────────────────────────────────────────────────────────────
 
 let BASE = "";
+let SECRET = "";
 
 async function get(p: string, opts: { cookie?: string; rsc?: boolean } = {}) {
   const headers: Record<string, string> = {};
@@ -217,40 +213,9 @@ function walkFiles(dir: string, exts: RegExp, out: string[] = []): string[] {
   return out;
 }
 
-function checkRemote() {
-  let url = "";
+function git(args: string[]): string | null {
   try {
-    url = execFileSync("git", ["remote", "get-url", "origin"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch {
-    return { note: "no git remote" };
-  }
-  const m = url.match(/github\.com[:/]([^/]+)\/([^/.]+?)(?:\.git)?$/i);
-  if (!m) return { note: `remote ${url} isn't on GitHub; check its visibility yourself` };
-  return { owner: m[1], repo: m[2] };
-}
-
-/**
- * Is the repo public? Asks, in order: CI (REPO_PRIVATE from the event payload),
- * the gh CLI (REST, authenticated), the API with a token, then the API
- * anonymously (200 = anyone can see it, 404 = private).
- */
-async function repoIsPublic(owner: string, repo: string): Promise<boolean | null> {
-  if (process.env.REPO_PRIVATE === "true") return false;
-  if (process.env.REPO_PRIVATE === "false") return true;
-  try {
-    const out = execFileSync("gh", ["api", `repos/${owner}/${repo}`, "--jq", ".private"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15000 }).trim();
-    if (out === "true") return false;
-    if (out === "false") return true;
-  } catch {}
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  try {
-    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { "user-agent": "company-audit-verify-share", accept: "application/vnd.github+json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.status === 200) return token ? !(await r.json()).private : true;
-    if (r.status === 404) return false;
-    return null;
+    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   } catch {
     return null;
   }
@@ -305,29 +270,68 @@ async function main() {
   log("verify:share — proving the share view leaks nothing\n");
 
   // Content, and the probes derived from it.
-  let audit: ReturnType<typeof parsePublic>["audit"];
+  let audit: PublicAudit;
   try {
-    audit = parsePublic({ config, company, role, workflows, record, competitors, ideas, sources, fit }).audit;
+    audit = loadPublic().audit;
   } catch (e) {
     console.error((e as Error).message);
     process.exit(1);
   }
+
+  // The prep under test, and the secret the server will open it with.
+  const original = existsSync(PREP_SEALED) ? readFileSync(PREP_SEALED, "utf8") : null;
+  let secret = envVar("PREP_SECRET");
+  let prepRaw: unknown = null;
+  let prepFrom = "";
+  const sealed = readSealed();
+  if (secret && isSealed(sealed)) {
+    try {
+      prepRaw = JSON.parse(await unseal(sealed, secret));
+      prepFrom = "content/prep.sealed.json";
+    } catch {
+      fail("content/prep.sealed.json doesn't open with this PREP_SECRET. Run `npm run prep:seal`.");
+    }
+    const plain = await loadPrepPlain();
+    if (plain && prepRaw && JSON.stringify(parsePrep(plain.raw, audit)) !== JSON.stringify(parsePrep(prepRaw, audit)))
+      warnings.push("content/prep.sealed.json is older than content/prep.ts, so a deploy would show stale prep. Run `npm run prep:seal`.");
+  }
+  if (!prepRaw) {
+    // No secret here (CI without the repo secret): seal the plain prep for this run only.
+    const plain = await loadPrepPlain({ allowExample: true });
+    if (!plain) {
+      console.error("No prep to test: no PREP_SECRET for content/prep.sealed.json and no content/prep.ts.");
+      process.exit(1);
+    }
+    if (plain.file.endsWith("prep.example.ts") && !audit.config.company.fictional)
+      warnings.push("No PREP_SECRET, so this run checked the boundary with the template's example prep, not yours. Add PREP_SECRET as a repo secret so CI checks your real notes.");
+    prepRaw = plain.raw;
+    prepFrom = path.relative(ROOT, plain.file);
+    secret = newSecret();
+    writeFileSync(PREP_SEALED, JSON.stringify(await seal(JSON.stringify(parsePrep(prepRaw, audit)), secret), null, 2) + "\n");
+  }
+  const restore = () => {
+    if (original === null) return;
+    if (readFileSync(PREP_SEALED, "utf8") !== original) writeFileSync(PREP_SEALED, original);
+  };
+  process.on("exit", restore);
+  SECRET = secret!;
+
   const prep = parsePrep(prepRaw, audit);
   const { probes, shared, quoted } = buildProbes(prep, normalise([...strings(audit)].join(" | ")), publicSourceCorpus());
-  log(`  ${probes.length} probes from content/prep.ts (${shared + quoted.length} skipped because the same words are already public)`);
+  log(`  ${probes.length} probes from ${prepFrom} (${shared + quoted.length} skipped because the same words are already public)`);
   for (const q of quoted)
-    warnings.push(`content/prep.ts quotes text that's already in the public page code, so it isn't probed: “${q.text}” (from: ${q.from}). Fine if the talk track reads the page aloud; if not, that text shouldn't be in a public component.`);
-  if (probes.length < 5) fail(`Only ${probes.length} probes: content/prep.ts is too thin to prove anything. Add real prep content.`);
+    warnings.push(`The prep quotes text that's already in the public page code, so it isn't probed: “${q.text}” (from: ${q.from}). Fine if the talk track reads the page aloud; if not, that text shouldn't be in a public component.`);
+  if (probes.length < 5) fail(`Only ${probes.length} probes: the prep is too thin to prove anything. Add real prep content.`);
 
-  // 1. Is the source itself public?
-  const remote = checkRemote();
-  if ("owner" in remote && remote.owner && remote.repo) {
-    const pub = await repoIsPublic(remote.owner, remote.repo);
-    const msg = `The git remote ${remote.owner}/${remote.repo} is a PUBLIC repo. The prep gate only protects the deployed site: anyone can read content/prep.ts on GitHub. Make the repo private (Settings → General → Danger zone → Change visibility).`;
-    if (pub === true) (ARGS.has("--strict-private") ? fail : (m: string) => warnings.push(m))(msg);
-    else if (pub === null) warnings.push(`Couldn't check whether ${remote.owner}/${remote.repo} is private. Check it yourself.`);
-    else log(`  ✓ ${remote.owner}/${remote.repo} is private`);
-  } else if ("note" in remote) warnings.push(`Repo visibility not checked: ${remote.note}.`);
+  // 1. Git: repos are public, so only the sealed prep may ever be committed.
+  if (git(["rev-parse", "--is-inside-work-tree"]) === "true") {
+    if (git(["ls-files", "--error-unmatch", "content/prep.ts"]) !== null)
+      fail("content/prep.ts is tracked by git, so your prep notes are in the repo for anyone to read. Run `git rm --cached content/prep.ts` (it's in .gitignore) and commit only content/prep.sealed.json.");
+    else log("  ✓ content/prep.ts is not tracked by git");
+    const history = git(["log", "--all", "--format=%h", "--", "content/prep.ts"]);
+    if (history && !audit.config.company.fictional)
+      warnings.push(`content/prep.ts is in this repo's git history (${history.split("\n").length} commits). Anyone can read those versions on a public repo; rewrite the history or start a fresh repo if they held real notes.`);
+  }
 
   // 2. Build.
   if (!ARGS.has("--no-build")) {
@@ -468,7 +472,7 @@ async function main() {
     for (const f of [...new Set(failures)]) log(`  ✗ ${f}`);
     process.exit(1);
   }
-  log(`\n✓ verify:share passed in ${((Date.now() - t0) / 1000).toFixed(1)}s. The share view carries nothing from content/prep.ts.`);
+  log(`\n✓ verify:share passed in ${((Date.now() - t0) / 1000).toFixed(1)}s. The share view carries nothing from the prep.`);
 }
 
 main().catch((e) => {

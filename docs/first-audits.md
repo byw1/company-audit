@@ -8,8 +8,8 @@ Two runs proved the template end to end, in October 2026:
    seen, run through `/new-audit` from the role in the Hired pipeline.
 
 Both pass `npm run check` and `npm run verify:share`, and both went through
-the fact-check pass with every BLOCKER and FIX resolved. Neither is
-deployed: each needs its own private repo first.
+the fact-check pass with every BLOCKER and FIX resolved. Since then the
+template seals prep, so audit repos can be public.
 
 ## What the template couldn't express (SuperOrdinary port)
 

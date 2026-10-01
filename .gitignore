@@ -8,9 +8,12 @@ build
 next-env.d.ts
 *.tsbuildinfo
 
-# env — PREP_KEY lives in the host's variables, never in git
+# env — PREP_KEY and PREP_SECRET live in .env.local and the host's variables, never in git
 .env*
 !.env.example
+
+# your prep notes in plain text; only content/prep.sealed.json is committed
+content/prep.ts
 
 # verification and lighthouse output
 .lighthouseci
@@ -19,3 +22,9 @@ next-env.d.ts
 # os / editors
 .DS_Store
 .vercel
+
+# cloudflare
+.open-next
+.wrangler
+.dev.vars*
+dist

@@ -23,9 +23,10 @@ export default {
     jdSource: "nw-jd",
   },
   author: {
-    name: "William Lee",
-    email: "william@bywilliaml.com",
-    linkedin: "https://www.linkedin.com/in/bywilliaml",
+    // You: shown in the header ("An outside-in read of {Company}, by {name}") and footer.
+    name: "Alex Example",
+    email: "alex@example.com",
+    linkedin: "https://www.linkedin.com/in/example",
   },
   researched: "2026-09",
   // accent: "#2f5bea", // optional: overrides the colour derived from the company's icon

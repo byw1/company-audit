@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Rename this per audit: it becomes <name>.<your-subdomain>.workers.dev.
+  "name": "company-audit",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Self-reference, required by OpenNext; must match "name" above.
+    { "binding": "WORKER_SELF_REFERENCE", "service": "company-audit" }
+  ],
+  "observability": { "enabled": true }
+  // Secrets, set once per Worker (never in this file):
+  //   npx wrangler secret put PREP_KEY
+  //   npx wrangler secret put PREP_SECRET
+  // Optional variable for absolute link-preview URLs on a custom domain:
+  //   "vars": { "NEXT_PUBLIC_SITE_URL": "https://audit.example.com" }
+}

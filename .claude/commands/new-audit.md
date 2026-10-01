@@ -20,6 +20,12 @@ leaving no fictional company, people or sources behind.
 
 ## 0. Set up
 
+- If `content/prep.ts` doesn't exist, run `npm run prep:init`. It copies the
+  example prep (gitignored) and generates `PREP_KEY` and `PREP_SECRET` in
+  `.env.local`.
+- Read `content/author.md`. If it still has the template's placeholder
+  comments, ask me for my rules and where my evidence lives, and fill it in.
+  Set `author` (name, email, LinkedIn) in `content/audit.config.ts` too.
 - In `content/audit.config.ts`:
   - set `company` (name, domain, `fictional: false`), `role` (title, team,
     location, `jdUrl`, `jdSource: "jd"`) and `researched` (this month, YYYY-MM);
@@ -29,17 +35,18 @@ leaving no fictional company, people or sources behind.
     `company.iconDomain` to one of its domains that has one (an investor or
     regional site), or `accent` if the icon is greyscale;
   - turn modules on or off. Fit stays off unless I ask for it.
-- Check what Hired already knows: `list_applications` (search the company name)
-  and `get_company` for any notes, contacts and the application. Build on that
-  rather than starting cold, and note the application id for prep.
-- Read my standing rules: Hired `list_notes`, every GUARDRAIL. Keep them in
-  mind for steps 7–8.
+- If `author.md` names a career workspace connected to you (for example
+  Hired: `list_applications`, `get_company`, `list_notes`), check what it
+  already knows about this company and role, and read every guardrail note.
+  Build on that rather than starting cold.
 
 ## 1. Confirm the role is live, and save the JD
 
 - Find the role on the company's **careers index** (the list page, or their ATS
   board), not just at the direct URL. Postings often stay reachable by URL after
-  they've been taken down. Hired's `check_posting_live` can help.
+  they've been taken down. Many boards (Ashby, Greenhouse, Lever) have a
+  public JSON API that lists every open role; use it when the page is
+  client-rendered.
 - If it's not on the index, stop and tell me. Don't build an audit for a dead
   role.
 - Save the full JD text to `content/jd.md` with a header: URL, the index URL
@@ -135,11 +142,11 @@ size, who the role reports to).
 
 ## 7. Prep → `content/prep.ts` (private)
 
-Follow my guardrails (`list_notes`, GUARDRAIL) to the letter.
+Follow the guardrails in `content/author.md` to the letter.
 
-- Find my evidence with Hired `search_me`. Search the JD's own language two or
-  three ways before deciding I have no evidence. Use `00_MASTER_CONTEXT.md` if
-  `MASTER_CONTEXT_PATH` is set. Never use resumes already submitted.
+- Find my evidence in the sources `author.md` names. Search the JD's own
+  language two or three ways before deciding I have no evidence. Never use
+  resumes already submitted.
 - `talkTrack`: what I say on each chapter while sharing the screen, with the
   question I stop and ask.
 - `likelyQuestions`: what they're likely to ask given this JD. Outlines, not
@@ -151,6 +158,7 @@ Follow my guardrails (`list_notes`, GUARDRAIL) to the letter.
   with what they've said publicly.
 - `questionsForThem`: questions that show I read the record. Cite the source.
 - `careful`, `numbers` (to know cold), `checklist` (before the call).
+- Then `npm run prep:seal`. Only `content/prep.sealed.json` is committed.
 
 ## 8. Fact-check (separate subagent)
 
@@ -171,8 +179,8 @@ as a `read()` if it's honestly an inference.
 ## Finish
 
 ```bash
-npm run logos          # icons for every domain, and the accent; commit the output
-npm run validate
+npm run logos          # icons, the accent, and the favicon/link-preview images; commit the output
+npm run prep:seal      # encrypt content/prep.ts; commit content/prep.sealed.json
 npm run check
 npm run verify:share   # must pass
 npm run dev            # read every page once, in the share view
@@ -186,5 +194,5 @@ Then report back with:
    original wording, what changed, and why.
 3. Open gaps: things you couldn't source, evidence of mine you couldn't find,
    and validation warnings left.
-4. Next: set `PREP_KEY` on Railway, generate the domain, redeploy (README →
-   Deploy).
+4. Next: deploy (README → Deploy). Set `PREP_KEY` and `PREP_SECRET` as
+   secrets on the host; they're in `.env.local`.

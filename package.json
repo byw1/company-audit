@@ -2,21 +2,30 @@
   "name": "company-audit",
   "version": "1.0.0",
   "private": true,
-  "description": "A template for outside-in company audit sites: one company, one role, public by default, with a key-gated prep layer.",
+  "description": "Outside-in audit sites for job interviews: one company, read through one role, with encrypted interview prep.",
   "engines": {
     "node": "22.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "tsx --conditions=react-server scripts/prep.ts seal --if-present && next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "validate": "tsx --conditions=react-server scripts/validate.ts",
-    "logos": "tsx scripts/logos.ts",
+    "logos": "tsx scripts/logos.ts && tsx scripts/brand.tsx",
     "verify:share": "tsx --conditions=react-server scripts/verify-share.ts",
     "lighthouse": "lhci autorun",
-    "check": "npm run validate && npm run typecheck && npm run lint"
+    "check": "npm run validate && npm run typecheck && npm run lint",
+    "prep:init": "tsx --conditions=react-server scripts/prep.ts init",
+    "prep:seal": "tsx --conditions=react-server scripts/prep.ts seal",
+    "prep:watch": "tsx --conditions=react-server scripts/prep.ts seal --watch",
+    "prep:status": "tsx --conditions=react-server scripts/prep.ts status",
+    "prep:open": "tsx --conditions=react-server scripts/prep.ts open",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "skill:zip": "node scripts/skill-zip.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
@@ -42,6 +51,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
     "@lhci/cli": "^0.15.1",
+    "@opennextjs/cloudflare": "^1.20.7",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -53,6 +63,12 @@
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "5.8.3",
-    "typescript-eslint": "^8.71.0"
+    "typescript-eslint": "^8.71.0",
+    "wrangler": "^4.145.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byw1/company-audit"
   }
 }

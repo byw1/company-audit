@@ -9,7 +9,7 @@ and your job is to find what's wrong. Be literal and skeptical. A claim
 passes only if a source says it.
 
 Read `CLAUDE.md` for the content rules, then check every file in `content/`
-except `generated/`.
+except `generated/` and `prep.sealed.json` (`prep.ts` is the plain version).
 
 ## What to check
 
@@ -38,12 +38,13 @@ one), and every source a `read()` cites:
    knowledge?
 5. For **ideas**: does each trace point at something that actually supports it?
 6. For **`prep.ts` and `fit.ts`** (anything about the author):
-   - Call Hired `list_notes` and check every GUARDRAIL note.
-   - Check every number and story against Hired `search_me`. Never check
-     against submitted resumes.
-   - Flag: an inflated figure; the author called technical or an engineer;
-     building put ahead of leadership scope; the AI tools used to build the
-     site named; a phone number; a side project other than viral or Hired.
+   - Read `content/author.md` and check every guardrail in it, plus any
+     guardrail notes in a career workspace it names.
+   - Check every number and story against the evidence sources it names.
+     Never check against submitted resumes.
+   - Flag: an inflated figure; a phone number; anything `author.md` rules
+     out; and any personal detail in a public file (`fit.ts`, `author.md`,
+     anything but `prep.ts`) that the site doesn't need.
 
 If a source is unreachable, say so: that is a FIX (find another source or cut
 the claim), not a pass.

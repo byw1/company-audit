@@ -1,6 +1,6 @@
 import "server-only";
 import { CHAPTERS } from "@/lib/chapters";
-import { talkTrackByChapter } from "@/lib/prep/content";
+import { getPrep, talkTrackByChapter } from "@/lib/prep/content";
 import { getView } from "@/lib/view";
 import TalkTrackDrawer from "./TalkTrackDrawer";
 
@@ -14,10 +14,12 @@ import TalkTrackDrawer from "./TalkTrackDrawer";
 export default async function PrepLayer() {
   const { share } = await getView();
   if (share) return null;
+  const prep = await getPrep();
+  if (!prep) return null;
 
   const labels = Object.fromEntries(CHAPTERS.map((c) => [c.id, c.kicker]));
 
   return (
-    <TalkTrackDrawer notes={talkTrackByChapter()} labels={labels} />
+    <TalkTrackDrawer notes={talkTrackByChapter(prep)} labels={labels} />
   );
 }

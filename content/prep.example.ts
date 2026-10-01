@@ -2,17 +2,18 @@ import "server-only";
 import type { PrepInput } from "@/lib/schema/prep";
 
 /**
- * PREP ONLY. Never rendered or shipped without the prep key.
+ * THE SHAPE OF content/prep.ts, with a fictional example.
  *
- * `server-only` fails the build if this file is ever pulled into a client
- * bundle; eslint.config.mjs fails lint if public code imports it; and
- * `npm run verify:share` crawls the built site to prove none of it leaks.
+ * Your real prep goes in content/prep.ts, which is gitignored and never
+ * leaves your machine. `npm run prep:init` copies this file there to start;
+ * `npm run prep:seal` encrypts it into content/prep.sealed.json, the only
+ * form that's committed or deployed.
  *
- * Anything about me follows the guardrails in CLAUDE.md: real numbers only,
- * leadership scope first, evidence from my own records.
+ * Anything about you follows the guardrails in content/author.md: real
+ * numbers only, evidence from your own record.
  *
- * FICTIONAL EXAMPLE: written for the invented Northwind role to show the
- * format. /new-audit replaces all of it.
+ * FICTIONAL EXAMPLE: written for the invented Northwind role. /new-audit
+ * replaces all of it in your own content/prep.ts.
  */
 export default {
   talkTrack: [

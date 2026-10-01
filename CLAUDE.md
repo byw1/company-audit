@@ -1,19 +1,22 @@
 # company-audit
 
 A template for outside-in audit sites: one company, read through one role.
-Each audit is a separate private repo created from this template. The site is
-public by default; a key-gated prep layer holds interview notes.
+Each audit is its own repo created from this template, and can be public: the
+site is public by default, and the key-gated prep layer (interview notes) is
+committed only in encrypted form.
 
 Two jobs, in this order:
 
 1. **Proof for a hiring team.** It reads like an operator wrote it, not a fan:
    how the business is set up, how the work flows, what the company has said
    publicly, who it competes with, and what I'd do first.
-2. **My interview prep.** Talk track, likely questions, pushback, gaps, who's
-   who and questions to ask, never visible to anyone without the key.
+2. **The author's interview prep.** Talk track, likely questions, pushback,
+   gaps, who's who and questions to ask, never visible to anyone without the
+   key, and never in the repo in plain text.
 
-The site is about **the company**, not about me. `/fit` is optional and off by
-default.
+The site is about **the company**, not about the author. `/fit` is optional
+and off by default. "I" and "me" below mean the author: the person whose name
+is in `content/audit.config.ts` and whose rules are in `content/author.md`.
 
 ## Where things live
 
@@ -28,7 +31,10 @@ default.
 | `content/competitors.ts` | Axes, the company's own position, 4–8 competitors with moves, direction, threat, response |
 | `content/ideas.ts` | Initiatives (impact, effort, traces) and the 30/60/90 plan |
 | `content/sources.ts` | Every source: id, title, publisher, URL, kind, published, **accessed**, group; plus caveats |
-| `content/prep.ts` | **PRIVATE.** Talk track, likely questions, pushback, gaps, who's who, questions for them |
+| `content/author.md` | **The author's rules**: guardrails for anything written about them, and where their evidence lives. Read before writing `prep.ts` or `fit.ts`. |
+| `content/prep.ts` | **PRIVATE, gitignored.** Talk track, likely questions, pushback, gaps, who's who, questions for them. Never committed. |
+| `content/prep.sealed.json` | `prep.ts`, encrypted (AES-256-GCM) by `npm run prep:seal`. The only form of prep that's committed or deployed. |
+| `content/prep.example.ts` | The shape of `prep.ts`, with a fictional example. `npm run prep:init` copies it to start. |
 | `content/fit.ts` | Optional: JD requirement → my evidence |
 | `content/jd.md` | The job description text, saved when the role was confirmed live |
 | `lib/schema/` | Zod schemas and cross-file checks. `prep.ts` is separate and private. |
@@ -37,11 +43,14 @@ default.
 ## Commands
 
 ```bash
-npm run validate      # schemas, labels, source ids, cross-references, dates
-npm run logos         # fetch icons into public/logos, derive the accent (commit the output)
-npm run dev           # http://localhost:3000 — ?prep=dev unlocks the prep view locally
+npm run prep:init     # once: content/prep.ts from the example, PREP_KEY + PREP_SECRET in .env.local
+npm run validate      # schemas, labels, source ids, cross-references, dates, JD quotes
+npm run logos         # icons into public/logos, the accent, and the favicon/link-preview PNGs (commit the output)
+npm run dev           # http://localhost:3000 — seals prep first; ?prep=<PREP_KEY> unlocks the prep view
+npm run prep:seal     # encrypt content/prep.ts → content/prep.sealed.json (prep:watch re-seals on save)
 npm run check         # validate + typecheck + lint
-npm run verify:share  # build, crawl the share view, prove nothing from prep.ts leaks
+npm run verify:share  # build, crawl the share view, prove nothing from the prep leaks
+npm run cf:deploy     # build for Cloudflare Workers and deploy (README → Deploy)
 ```
 
 `/new-audit <Company> <domain> <JD URL>` runs the research playbook below and
@@ -87,52 +96,55 @@ fills `content/`.
 - Write plainly. Short sentences, no hype, no "leverage/synergy/world-class".
   It should read like an operator's notes.
 
-## Anything about me (`prep.ts`, `fit.ts`)
+## Anything about the author (`prep.ts`, `fit.ts`)
 
-These follow my standing guardrails. The current, complete list lives in my
-Hired workspace. **Before writing anything about me, call Hired `list_notes`
-and read every note of kind GUARDRAIL**, including the ones not in the
-connection briefing. Do not copy personal details from those notes into this
-repo. The ones that always apply:
+**Read `content/author.md` first, every time.** It holds the author's
+guardrails and says where their evidence lives. Its rules override anything
+here. The ones that always apply:
 
 - Real numbers only. Never inflate a figure.
-- Leadership scope leads; builds follow.
-- Never call me technical or an engineer. If building comes up, the phrase is
-  "AI-assisted development".
-- Never name the AI tools used to build this site, on the site or in prep.
-- Email and LinkedIn only. No phone number.
-- Side projects stay off, except viral and Hired (hired.tools).
-- My evidence comes from my Hired workspace (`search_me`, searched two or three
-  ways) and `00_MASTER_CONTEXT.md` (path in `MASTER_CONTEXT_PATH` in
-  `.env.local`, never committed). **Never from resumes already submitted**:
-  they are records of what was sent, and some claims in them have since been
-  corrected.
-- If the evidence for something isn't there, say so in `prep.ts` as a gap. Don't
-  invent it.
+- No phone number on the site. Email and LinkedIn only.
+- Evidence comes from the sources `author.md` names, searched two or three
+  ways before concluding something isn't there. **Never from resumes already
+  sent**: they're records of what was sent, and some claims in them may have
+  since been corrected.
+- If the evidence for something isn't there, say so in `prep.ts` as a gap.
+  Don't invent it.
+- Don't copy personal details from the author's private notes into the repo
+  beyond what the site needs. The repo may be public; only `prep.ts` is
+  sealed.
 
 ## The prep boundary
 
-`content/prep.ts` must never reach anyone without the key. Three layers enforce
-it, so one mistake can't leak:
+Prep must never reach anyone without the key, and audit repos can be public.
+Four layers enforce it, so one mistake can't leak:
 
-1. **ESLint** (`eslint.config.mjs`). Public code may not import
-   `content/prep`, `lib/prep/*`, `lib/schema/prep` or `components/prep/*`. The
-   one sanctioned door is `<PrepLayer>` (`components/prep/PrepLayer.tsx`), a
-   server component that renders nothing unless the server decided this request
-   is the prep view.
-2. **`server-only`** at the top of `content/prep.ts`. The build fails if it is
+1. **Sealed in git.** `content/prep.ts` is gitignored. `npm run prep:seal`
+   encrypts it into `content/prep.sealed.json` with `PREP_SECRET` (32 random
+   bytes from `npm run prep:init`, kept in `.env.local` and the host's
+   secrets). The server decrypts it per request, only for the prep view.
+   Never commit `prep.ts`, never commit `.env.local`, and never put
+   `PREP_SECRET` anywhere public.
+2. **ESLint** (`eslint.config.mjs`). Public code may not import
+   `content/prep*`, `lib/prep/*`, `lib/schema/prep` or `components/prep/*`.
+   The one sanctioned door is `<PrepLayer>` (`components/prep/PrepLayer.tsx`),
+   a server component that renders nothing unless the server decided this
+   request is the prep view.
+3. **`server-only`** in `lib/prep/content.ts`. The build fails if prep is
    ever pulled into a client bundle.
-3. **`npm run verify:share`** crawls the built site in the share view and checks
-   the server HTML, RSC payloads, rendered DOM, search index and every JS chunk.
-   A control step proves the same probes appear in the prep view.
+4. **`npm run verify:share`** crawls the built site in the share view and
+   checks the server HTML, RSC payloads, rendered DOM, search index and every
+   JS chunk. A control step proves the same probes appear in the prep view.
+   It also fails if `content/prep.ts` is tracked by git.
 
 The view is decided in `middleware.ts` → `lib/view.ts`, never on the client.
 Never hide prep content with CSS, never pass it as a client prop outside
 `components/prep/`, and never add prep items to the public search index
 (`/search-index`). The prep view's extra items come from `/prep/search-index`.
 
-**Audit repos must be private.** The gate protects the deployed site, not the
-source. `verify:share` warns when the git remote is public.
+After editing `prep.ts`, run `npm run prep:seal` (or keep `npm run
+prep:watch` running) and commit the sealed file. `npm run prep:status` says
+whether it's current.
 
 ## Logos
 
@@ -140,11 +152,13 @@ source. `verify:share` warns when the git remote is public.
 competitor, every source's host) and caches its icon from Twenty's favicon
 service into `public/logos/`. It falls back to a monogram on a 404 or a
 reserved TLD. It also derives the accent from the company icon, with contrast
-checked for light and dark. If the company's own domain has no icon, set
+checked for light and dark, and draws the favicon, home-screen icon and
+link preview into `app/*.png`. If the company's own domain has no icon, set
 `company.iconDomain` to another of its domains that does (an investor or
-regional site). The output is committed: the build never fetches,
-and the site works offline. Rerun it whenever you add a competitor or a source
-on a new domain.
+regional site). The output is committed: the build never fetches, nothing is
+drawn at runtime, and the site works offline. Rerun it whenever you add a
+competitor or a source on a new domain, or change the company, role or
+author.
 
 ## Before anything is sent
 
@@ -152,7 +166,8 @@ on a new domain.
    explain.
 2. The fact-check pass has run (the `fact-checker` subagent), and every BLOCKER
    and FIX is resolved.
-3. `npm run verify:share` passes.
+3. `npm run prep:status` says the sealed prep is current, and
+   `npm run verify:share` passes.
 4. Open the deployed site in the share view (header toggle, or a private
    window) and read it once as the recipient would.
 

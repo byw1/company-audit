@@ -5,28 +5,32 @@
  *
  * Runs with --conditions=react-server so `server-only` resolves to a no-op.
  */
-import config from "@/content/audit.config";
-import company from "@/content/company";
-import competitors from "@/content/competitors";
-import fit from "@/content/fit";
-import ideas from "@/content/ideas";
-import prepRaw from "@/content/prep";
-import record from "@/content/public-record";
-import role from "@/content/role";
-import sources from "@/content/sources";
-import workflows from "@/content/workflows";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parsePrep, prepWarnings } from "@/lib/schema/prep";
-import { AuditContentError, formatIssues, parsePublic, type Issue } from "@/lib/schema/validate";
+import { AuditContentError, formatIssues, type Issue } from "@/lib/schema/validate";
+import { loadPrepPlain, loadPrepSealed, loadPublic, rawPublic } from "./lib/audit";
 
-function main() {
+async function main() {
   let warnings: Issue[] = [];
   try {
-    const { audit, warnings: w } = parsePublic({ config, company, role, workflows, record, competitors, ideas, sources, fit });
+    const { audit, warnings: w } = loadPublic();
     warnings = w;
-    const prep = parsePrep(prepRaw, audit);
-    warnings.push(...prepWarnings(prep, audit));
+    const { company, role, workflows, record, competitors, ideas, sources } = rawPublic;
+
+    // Prep: your plain content/prep.ts if it's here, else the sealed file (with
+    // PREP_SECRET), else the template's example.
+    const plain = await loadPrepPlain();
+    const sealed = plain ? null : await loadPrepSealed().catch(() => {
+      throw new AuditContentError([{ level: "error", file: "content/prep.sealed.json", path: "", message: "Doesn't open with this PREP_SECRET" }]);
+    });
+    const example = plain || sealed ? null : await loadPrepPlain({ allowExample: true });
+    const prepRaw = plain?.raw ?? sealed ?? example?.raw;
+    const prepFrom = plain ? "content/prep.ts" : sealed ? "content/prep.sealed.json" : example ? "content/prep.example.ts (no prep of your own here yet)" : null;
+    if (prepRaw) {
+      const prep = parsePrep(prepRaw, audit);
+      warnings.push(...prepWarnings(prep, audit));
+    }
 
     const quoteIssues = checkJdQuotes({ company, role, workflows, record, competitors, ideas }, audit.config.role.jdSource);
     if (quoteIssues.length) throw new AuditContentError(quoteIssues);
@@ -39,6 +43,7 @@ function main() {
         `${audit.sources.items.length} sources · ${audit.workflows.length} workflows · ` +
         `${audit.competitors.field.length} competitors · ${audit.ideas.items.length} ideas`,
     );
+    console.log(`  prep: ${prepFrom ?? "nothing to check (no content/prep.ts, and no PREP_SECRET to open the sealed file)"}`);
   } catch (e) {
     if (e instanceof AuditContentError) {
       console.error(e.message);
@@ -91,4 +96,4 @@ function countFacts(tree: unknown) {
   return counts;
 }
 
-main();
+void main();
