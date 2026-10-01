@@ -61,11 +61,11 @@ Keep this template private too.
 1. **New project → Deploy from GitHub repo**, and pick `byw1/{company}-audit`.
 2. **Variables → `PREP_KEY`**: a long random string, e.g. from
    `openssl rand -base64 32`. Keep it in your password manager.
-3. **Settings → Networking → Generate domain.** Do this *before* the build you
-   intend to share: the link-preview image's absolute URL is baked in at build
-   time from `RAILWAY_PUBLIC_DOMAIN` (or `NEXT_PUBLIC_SITE_URL` for a custom
-   domain).
-4. **Redeploy** once the domain exists.
+3. **Settings → Networking → Generate domain.** The link-preview image's
+   absolute URL comes from `RAILWAY_PUBLIC_DOMAIN` (or `NEXT_PUBLIC_SITE_URL`
+   for a custom domain), which a running deploy only sees if the domain
+   existed when it started.
+4. **Redeploy** once the domain exists, so the new deploy picks it up.
 5. Open `https://<domain>/?prep=<PREP_KEY>` once. A cookie remembers you for 60
    days and the key is removed from the address bar.
 6. Use the **Prep / Share** toggle in the header to preview exactly what a
@@ -253,8 +253,9 @@ to update.
   otherwise picks Node 18. Tailwind v4's native binding needs Node 20+, and the
   failure surfaces much later as `Cannot find native binding`.
 - **Fonts come from npm**, so the build never depends on a network fetch.
-- **Set the domain before the build you share.** `metadataBase` is frozen at
-  build time, and the preview card won't self-heal.
+- **Redeploy after setting the domain.** `metadataBase` is read when the
+  server starts, so a deploy that started before the domain existed keeps
+  pointing preview cards at localhost until it restarts.
 - **`noindex`**, via metadata and an `X-Robots-Tag` header.
 - **Rendered per request** (`force-dynamic`), because the view is decided per
   request. Pages carry `Cache-Control: private, no-store`, so no shared cache can
