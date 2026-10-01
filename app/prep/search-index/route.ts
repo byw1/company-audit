@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prep } from "@/lib/prep/content";
+import { getPrep } from "@/lib/prep/content";
 import type { SearchItem } from "@/lib/search-types";
 import { getView } from "@/lib/view";
 
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const { share } = await getView();
-  if (share) return new NextResponse("Not found", { status: 404 });
+  const prep = share ? null : await getPrep();
+  if (!prep) return new NextResponse("Not found", { status: 404 });
   const items: SearchItem[] = [
     { id: "prep-home", kind: "Prep", label: "Prep: the whole sheet", href: "/prep" },
     ...prep.likelyQuestions.map((q, i) => ({ id: `prep-q-${i}`, kind: "Prep" as const, label: q.q, hint: "Likely question", href: `/prep#q-${i}` })),

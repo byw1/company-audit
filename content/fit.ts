@@ -4,9 +4,9 @@ import type { FitInput } from "@/lib/schema/public";
  * OPTIONAL, off by default (modules.fit in audit.config.ts). A short close,
  * not the point of the site: each JD requirement against my evidence.
  *
- * Anything about me follows the guardrails in CLAUDE.md. Evidence comes from
- * my own records (Hired search_me and the master context), never from
- * resumes already sent.
+ * Anything about the author follows content/author.md. Evidence comes from
+ * the sources it names, never from resumes already sent. Unlike prep, this
+ * page is public when switched on.
  *
  * FICTIONAL EXAMPLE: empty until fit is switched on for a real audit.
  */

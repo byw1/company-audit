@@ -3,3 +3,7 @@
 # Requires once per clone:  git config merge.ours.driver true
 content/** merge=ours
 public/logos/** merge=ours
+app/icon.png merge=ours binary
+app/apple-icon.png merge=ours binary
+app/opengraph-image.png merge=ours binary
+app/opengraph-image.alt.txt merge=ours

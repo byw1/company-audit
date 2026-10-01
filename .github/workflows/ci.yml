@@ -38,11 +38,26 @@ jobs:
       - run: npm ci
       - name: Install Chromium for the rendered-DOM check
         run: npx playwright-core install --with-deps chromium
-      - name: Crawl the share view for anything from content/prep.ts
+      - name: Crawl the share view for anything from the prep
         run: npm run verify:share
         env:
-          # Lets the check say whether this repo is public without an API call.
-          REPO_PRIVATE: ${{ github.event.repository.private }}
+          # Add PREP_SECRET as a repository secret so this checks your real,
+          # sealed prep. Without it, the check seals the example prep for the run.
+          PREP_SECRET: ${{ secrets.PREP_SECRET }}
+
+  cloudflare:
+    name: Cloudflare Workers build (OpenNext)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run cf:build
+      - name: Worker size (the free plan allows 3 MiB compressed)
+        run: npx wrangler deploy --dry-run --outdir .wrangler/dry | grep -i "total upload"
 
   lighthouse:
     name: Lighthouse (95+ performance and accessibility on /)

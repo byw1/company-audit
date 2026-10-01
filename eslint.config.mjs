@@ -15,7 +15,7 @@ const compat = new FlatCompat({ baseDirectory: __dirname });
  *
  * Three layers enforce it, so one mistake can't leak:
  *   1. this rule (catches the import at lint time),
- *   2. `import "server-only"` in content/prep.ts (fails the build if it ever
+ *   2. `import "server-only"` in lib/prep/content.ts (fails the build if it ever
  *      reaches a client bundle),
  *   3. `npm run verify:share` (crawls the built site and every JS chunk).
  */
@@ -36,7 +36,7 @@ const PREP_MODULES = [
 
 const config = [
   {
-    ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts", ".lighthouseci/**", ".verify/**"],
+    ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts", ".lighthouseci/**", ".verify/**", ".open-next/**", ".wrangler/**"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
@@ -65,6 +65,7 @@ const config = [
       "lib/prep/**",
       "lib/schema/prep.ts",
       "content/prep.ts",
+      "content/prep.example.ts",
       "scripts/**",
     ],
     rules: { "no-restricted-imports": "off" },
