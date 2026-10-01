@@ -1,0 +1,190 @@
+import { read, sourced } from "@/lib/claims";
+import type { SourcesInput } from "@/lib/schema/public";
+
+/**
+ * Every source the audit cites, by id. Each one is dated (the day it was
+ * read) and grouped for /sources. Where sources disagree, the conflict goes in
+ * `caveats` rather than being quietly resolved.
+ *
+ * FICTIONAL EXAMPLE: every source below is invented and lives on a .example
+ * domain, which can never resolve to a real site.
+ */
+export default {
+  items: [
+    // ── Northwind Commerce ──────────────────────────────────────────────────
+    {
+      id: "nw-jd",
+      title: "Head of Marketplace Operations (job posting)",
+      publisher: "Northwind careers",
+      url: "https://careers.northwind.example/jobs/head-of-marketplace-operations",
+      kind: "job-posting",
+      published: "2026-09-02",
+      accessed: "2026-09-14",
+      group: "Northwind Commerce",
+      note: "Confirmed live on the careers index, not just at its direct URL.",
+    },
+    {
+      id: "nw-10k-2025",
+      title: "Annual report on Form 10-K, fiscal 2025",
+      publisher: "Northwind Commerce investor relations",
+      url: "https://investors.northwind.example/filings/10-k-2025",
+      kind: "filing",
+      published: "2026-03-04",
+      accessed: "2026-09-12",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-q2-letter",
+      title: "Q2 2026 shareholder letter",
+      publisher: "Northwind Commerce investor relations",
+      url: "https://investors.northwind.example/letters/q2-2026",
+      kind: "investor",
+      published: "2026-08-06",
+      accessed: "2026-09-12",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-q2-call",
+      title: "Q2 2026 earnings call transcript",
+      publisher: "Northwind Commerce investor relations",
+      url: "https://investors.northwind.example/events/q2-2026-call",
+      kind: "investor",
+      published: "2026-08-06",
+      accessed: "2026-09-13",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-investor-day",
+      title: "Investor Day 2025 presentation",
+      publisher: "Northwind Commerce investor relations",
+      url: "https://investors.northwind.example/events/investor-day-2025",
+      kind: "investor",
+      published: "2025-11-18",
+      accessed: "2026-09-13",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-about",
+      title: "About Northwind, and leadership team",
+      publisher: "northwind.example",
+      url: "https://northwind.example/about",
+      kind: "company-site",
+      accessed: "2026-09-11",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-fulfilment-pr",
+      title: "Northwind Fulfilment opens its first East Coast warehouse",
+      publisher: "Northwind newsroom",
+      url: "https://northwind.example/newsroom/east-coast-fulfilment",
+      kind: "press-release",
+      published: "2026-02-10",
+      accessed: "2026-09-11",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-ipo-pr",
+      title: "Northwind Commerce prices its initial public offering",
+      publisher: "Northwind newsroom",
+      url: "https://northwind.example/newsroom/ipo-pricing",
+      kind: "press-release",
+      published: "2024-05-09",
+      accessed: "2026-09-11",
+      group: "Northwind Commerce",
+    },
+    {
+      id: "nw-ceo-podcast",
+      title: "Maya Okafor on building for makers first (podcast episode)",
+      publisher: "The Long Tail Show",
+      url: "https://longtail.example/episodes/maya-okafor",
+      kind: "podcast",
+      published: "2026-05-21",
+      accessed: "2026-09-13",
+      group: "Northwind Commerce",
+      note: "Quotes checked against the episode transcript.",
+    },
+    {
+      id: "nw-careers",
+      title: "Open roles (careers index)",
+      publisher: "Northwind careers",
+      url: "https://careers.northwind.example/jobs",
+      kind: "job-posting",
+      accessed: "2026-09-14",
+      group: "Northwind Commerce",
+    },
+
+    // ── The market ──────────────────────────────────────────────────────────
+    {
+      id: "mkt-wholesale-report",
+      title: "Independent retail wholesale, 2026 market report",
+      publisher: "Fieldnote Research",
+      url: "https://fieldnote.example/reports/independent-wholesale-2026",
+      kind: "analyst",
+      published: "2026-04",
+      accessed: "2026-09-12",
+      group: "The market",
+      confidence: "medium",
+      note: "Analyst estimate; methodology not fully disclosed.",
+    },
+
+    // ── Competitors ─────────────────────────────────────────────────────────
+    {
+      id: "lark-series-d",
+      title: "Larkspur raises a Series D to fund retailer credit",
+      publisher: "Commerce Weekly",
+      url: "https://commerceweekly.example/larkspur-series-d",
+      kind: "news",
+      published: "2026-06-03",
+      accessed: "2026-09-12",
+      group: "Competitors",
+    },
+    {
+      id: "harbor-wholesale",
+      title: "Introducing Harbor Wholesale",
+      publisher: "Harbor & Co. blog",
+      url: "https://harbor.example/blog/introducing-wholesale",
+      kind: "company-site",
+      published: "2026-03-17",
+      accessed: "2026-09-12",
+      group: "Competitors",
+    },
+    {
+      id: "mercato-us",
+      title: "Mercato Makers launches in the United States",
+      publisher: "Mercato newsroom",
+      url: "https://mercato.example/news/us-launch",
+      kind: "press-release",
+      published: "2026-01-27",
+      accessed: "2026-09-12",
+      group: "Competitors",
+    },
+    {
+      id: "tradefold-marketplace",
+      title: "Tradefold opens a supplier marketplace in beta",
+      publisher: "Retail Systems Journal",
+      url: "https://retailsystems.example/tradefold-marketplace-beta",
+      kind: "news",
+      published: "2026-07-08",
+      accessed: "2026-09-13",
+      group: "Competitors",
+    },
+    {
+      id: "shelfwise-network",
+      title: "Shelfwise adds a shared fulfilment network for small brands",
+      publisher: "Shelfwise newsroom",
+      url: "https://shelfwise.example/news/fulfilment-network",
+      kind: "press-release",
+      published: "2025-12-02",
+      accessed: "2026-09-13",
+      group: "Competitors",
+    },
+  ],
+  caveats: [
+    sourced(
+      "Active makers: the 10-K counts makers with at least one order in the trailing twelve months; the Investor Day deck counts every approved storefront. This audit uses the 10-K figure.",
+      ["nw-10k-2025", "nw-investor-day"],
+    ),
+    sourced("The market-size figure is an analyst estimate with a partly undisclosed method, so it is used for scale only.", "mkt-wholesale-report"),
+    read("Everything marked as an outside-in read is inference, not inside knowledge. Illustrative models use invented numbers."),
+  ],
+} satisfies SourcesInput;

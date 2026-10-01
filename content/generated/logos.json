@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-10-01",
+  "entries": {
+    "northwind.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "larkspur.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "harbor.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "mercato.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "tradefold.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "shelfwise.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "careers.northwind.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "investors.northwind.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "longtail.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "fieldnote.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "commerceweekly.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    },
+    "retailsystems.example": {
+      "status": "monogram",
+      "reason": "reserved TLD (fictional)"
+    }
+  }
+}

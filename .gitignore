@@ -1,0 +1,21 @@
+# dependencies
+node_modules
+
+# next
+.next
+out
+build
+next-env.d.ts
+*.tsbuildinfo
+
+# env — PREP_KEY lives in the host's variables, never in git
+.env*
+!.env.example
+
+# verification and lighthouse output
+.lighthouseci
+.verify
+
+# os / editors
+.DS_Store
+.vercel
