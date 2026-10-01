@@ -1,8 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
-import "@fontsource/instrument-serif/400.css";
-import "@fontsource/instrument-serif/400-italic.css";
 import "./globals.css";
 import { ClaimLegend } from "@/components/audit/Fact";
 import { FramedMark } from "@/components/audit/Mark";
@@ -10,13 +6,10 @@ import PrepLayer from "@/components/prep/PrepLayer";
 import Shell from "@/components/shell/Shell";
 import themeJson from "@/content/generated/theme.json";
 import { themeCss, type Theme } from "@/lib/color";
+import { mono, sans, serif } from "@/lib/fonts";
 import { audit, chapters, researchedLabel } from "@/lib/content";
 import { ModeProvider } from "@/lib/mode";
-import { buildSearchIndex } from "@/lib/search";
 import { getView } from "@/lib/view";
-
-// Fonts come from npm packages (geist, @fontsource) rather than
-// next/font/google, so a production build never depends on a network fetch.
 
 const { company, role, author } = audit.config;
 
@@ -65,7 +58,7 @@ const BOOT = `(function(){var d=document.documentElement;try{var t=localStorage.
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const mode = await getView();
   return (
-    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
         <style dangerouslySetInnerHTML={{ __html: themeCss(themeJson as Theme) }} />
@@ -80,8 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             fictional={company.fictional}
             mark={<FramedMark />}
             chapters={chapters.map(({ id, href, label, kicker }) => ({ id, href, label, kicker }))}
-            searchItems={buildSearchIndex()}
-            legend={<ClaimLegend />}
+              legend={<ClaimLegend />}
             prep={<PrepLayer />}
           >
             {children}

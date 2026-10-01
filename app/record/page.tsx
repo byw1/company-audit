@@ -64,6 +64,7 @@ export default function RecordPage() {
       />
 
       <Section className="pt-0">
+        <h2 className="sr-only">What they said, and what it implies for the role</h2>
         <Ledger rows={rows} />
       </Section>
 

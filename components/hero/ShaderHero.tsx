@@ -1,6 +1,6 @@
 "use client";
 
-import { useCanvasLoop, type Palette } from "./useCanvasLoop";
+import { isSoftwareRenderer, useCanvasLoop, type Palette } from "./useCanvasLoop";
 
 /**
  * A slow, domain-warped gradient in the audit's accent: one fragment shader,
@@ -70,6 +70,7 @@ export default function ShaderHero() {
     };
     setPalette(initial);
     return {
+      still: isSoftwareRenderer(gl),
       resize: (w, h, dpr) => {
         // Half resolution: the gradient is soft, and the GPU stays cool.
         const scale = dpr * 0.5;

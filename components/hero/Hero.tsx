@@ -14,6 +14,8 @@ export default function Hero() {
   return (
     <section className="relative isolate -mt-[100px] overflow-hidden pt-[100px] xl:-mt-14 xl:pt-14">
       <div className="absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_55%,transparent_96%)]" aria-hidden>
+        {/* Painted with the HTML, so the first frame already has its light; the canvas fades in over it. */}
+        <div className="absolute inset-0 [background:radial-gradient(60%_70%_at_86%_38%,color-mix(in_oklab,var(--live)_34%,transparent),transparent_70%),radial-gradient(40%_50%_at_70%_80%,color-mix(in_oklab,var(--live)_16%,transparent),transparent_70%)]" />
         <HeroCanvas variant={hero.variant} />
         {/* Keep the left calm for the headline, and fade into the page below. */}
         <div className="absolute inset-0 bg-gradient-to-r from-page via-page/70 to-transparent lg:via-page/40" />
