@@ -61,6 +61,14 @@ fills `content/`.
 
   Plain-text fields (titles, labels, owners) reject figures, so a number can
   never appear without a label. The build fails on an unlabelled claim.
+- **One `sourced()` says only what its source says.** The most common
+  fact-check failure is a sourced fact with one sentence of interpretation
+  added in the same call. Put the interpretation in its own `read()`. The
+  same goes for a headline or title: "growth broke planning" is a claim about
+  how the company runs inside; "growth is outpacing planning" is a read.
+- **Quotes from the JD are checked mechanically.** `npm run validate` fails
+  any `quote()` sourced to the posting that isn't word for word in
+  `content/jd.md`.
 - **Real numbers only, each with a source and a date.** Never round up. Where
   sources disagree, add a caveat in `sources.ts` rather than picking one
   silently.
@@ -132,7 +140,9 @@ source. `verify:share` warns when the git remote is public.
 competitor, every source's host) and caches its icon from Twenty's favicon
 service into `public/logos/`. It falls back to a monogram on a 404 or a
 reserved TLD. It also derives the accent from the company icon, with contrast
-checked for light and dark. The output is committed: the build never fetches,
+checked for light and dark. If the company's own domain has no icon, set
+`company.iconDomain` to another of its domains that does (an investor or
+regional site). The output is committed: the build never fetches,
 and the site works offline. Rerun it whenever you add a competitor or a source
 on a new domain.
 

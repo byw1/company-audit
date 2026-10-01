@@ -19,7 +19,7 @@ export const PAGE = "#f8f7f4";
 const root = process.cwd();
 
 export async function logoDataUrl(large: boolean): Promise<string | null> {
-  const e = logoFor(audit.config.company.domain);
+  const e = logoFor(audit.config.company.iconDomain ?? audit.config.company.domain);
   const src = large ? (e.src180 ?? e.src) : e.src;
   if (e.status !== "icon" || !src) return null;
   try {

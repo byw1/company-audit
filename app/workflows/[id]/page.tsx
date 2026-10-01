@@ -59,7 +59,7 @@ export default async function WorkflowPage({ params }: Params) {
       </header>
 
       <WorkflowFlow stages={stages} links={w.links} />
-      <p className="mt-2 text-[12px] text-ink-3">Stages left to right. Accented edges and badges mark where value leaks; dashed lines are loops back. Select a stage to jump to its detail.</p>
+      <p className="mt-2 text-[12px] text-ink-3">Stages left to right. Accented edges and badges mark where value leaks; dashed lines are loops back. Owners are an outside-in read unless a stage cites a source. Select a stage to jump to its detail.</p>
 
       <Section className="pt-12">
         <SectionHead n="Stages" title="Who holds each step" sub="The mechanics are public. Who owns each stage inside the company is my read, and labelled as one." />

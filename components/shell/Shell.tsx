@@ -130,7 +130,7 @@ export default function Shell(props: ShellProps) {
       <header
         className={cx(
           "chrome sticky top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
-          overHero ? "border-transparent bg-transparent" : "border-line-soft bg-page/80 backdrop-blur-xl backdrop-saturate-150",
+          overHero ? "border-transparent bg-transparent" : "border-line-soft bg-page/90 backdrop-blur-xl backdrop-saturate-150",
         )}
       >
         <div className="mx-auto flex h-14 w-full max-w-[1320px] items-center gap-4 px-4 sm:px-6 lg:px-8">

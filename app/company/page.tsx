@@ -24,7 +24,7 @@ export default function CompanyPage() {
           </>
         }
         sub={<Fact fact={c.oneLiner} />}
-        aside={<CompanyLogo domain={company.domain} name={company.name} size={64} alt={company.name} className="hidden lg:inline-grid" />}
+        aside={<CompanyLogo domain={company.iconDomain ?? company.domain} name={company.name} size={64} alt={company.name} className="hidden lg:inline-grid" />}
       />
 
       <Section className="pt-0">

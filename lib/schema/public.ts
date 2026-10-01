@@ -31,6 +31,11 @@ export const ConfigSchema = z.strictObject({
   company: z.strictObject({
     name: Plain,
     domain: Domain,
+    /**
+     * Where to fetch the company's icon when its main domain has none (an
+     * investor or regional site, say). Used for the logo, favicon and accent.
+     */
+    iconDomain: Domain.optional(),
     /** Shown on every page when true. The template's example is fictional. */
     fictional: z.boolean().default(false),
     ticker: z.string().optional(),

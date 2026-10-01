@@ -220,7 +220,7 @@ function walkFiles(dir: string, exts: RegExp, out: string[] = []): string[] {
 function checkRemote() {
   let url = "";
   try {
-    url = execFileSync("git", ["remote", "get-url", "origin"], { cwd: ROOT, encoding: "utf8" }).trim();
+    url = execFileSync("git", ["remote", "get-url", "origin"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   } catch {
     return { note: "no git remote" };
   }

@@ -185,6 +185,9 @@ service](https://github.com/twentyhq/favicon) into `public/logos/`.
 
 - Anything that 404s, or sits on a reserved TLD like `.example`, becomes a
   monogram tile in the accent.
+- If the company's own domain has no icon, set `company.iconDomain` in
+  `audit.config.ts` to another of its domains that has one (an investor or
+  regional site). The script says when this is needed.
 - The output is committed: the build never fetches, and the site works with the
   network off.
 - Re-run it whenever a new domain appears.
