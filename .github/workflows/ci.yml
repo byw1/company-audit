@@ -59,7 +59,7 @@ jobs:
         run: npx lhci autorun
       - name: Scores to the job summary
         if: always()
-        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/lighthouse-summary.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@v4
