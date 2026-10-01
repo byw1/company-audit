@@ -49,11 +49,12 @@ export const viewport: Viewport = {
 
 /**
  * Runs before first paint: applies the saved theme (or the OS's), presenter
- * mode (?present, or carried over from the last chapter), and marks the
- * document as able to animate reveals. No flash, and no-JS readers still get
- * every word.
+ * mode (?present, or carried over from the last chapter), marks the document
+ * as able to animate reveals, and notes the visitor's first interaction so the
+ * hero canvas can start even if it mounts after that moment. No flash, and
+ * no-JS readers still get every word.
  */
-const BOOT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("audit-theme");var dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);d.dataset.theme=dark?"dark":"light";}catch(e){}try{var q=new URLSearchParams(location.search);if(q.has("present")){sessionStorage.setItem("audit-present","1");}if(sessionStorage.getItem("audit-present")==="1"){d.setAttribute("data-present","");}}catch(e){}if(!matchMedia("(prefers-reduced-motion: reduce)").matches){d.classList.add("js-reveal");}})();`;
+const BOOT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("audit-theme");var dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);d.dataset.theme=dark?"dark":"light";}catch(e){}try{var q=new URLSearchParams(location.search);if(q.has("present")){sessionStorage.setItem("audit-present","1");}if(sessionStorage.getItem("audit-present")==="1"){d.setAttribute("data-present","");}}catch(e){}if(!matchMedia("(prefers-reduced-motion: reduce)").matches){d.classList.add("js-reveal");}var ev=["pointermove","pointerdown","keydown","wheel","touchstart","scroll"],on=function(){d.dataset.engaged="1";ev.forEach(function(e){removeEventListener(e,on,true)})};ev.forEach(function(e){addEventListener(e,on,{capture:true,passive:true})});})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const mode = await getView();

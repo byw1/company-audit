@@ -130,7 +130,8 @@ export function useCanvasLoop(
     const EVENTS = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart", "scroll"] as const;
     let idle = 0;
     let loaded = document.readyState === "complete";
-    let engaged = false;
+    // The boot script (app/layout.tsx) records an interaction that happened before this mounted.
+    let engaged = document.documentElement.dataset.engaged === "1";
     const go = () => {
       if (!loaded || !engaged || started) return;
       idle = w.requestIdleCallback ? w.requestIdleCallback(start, { timeout: 600 }) : window.setTimeout(start, 50);
@@ -144,8 +145,9 @@ export function useCanvasLoop(
       loaded = true;
       go();
     };
-    EVENTS.forEach((e) => window.addEventListener(e, onEngage, { passive: true, once: true }));
+    if (!engaged) EVENTS.forEach((e) => window.addEventListener(e, onEngage, { passive: true, once: true }));
     if (!loaded) window.addEventListener("load", onLoad, { once: true });
+    go();
 
     return () => {
       cancelAnimationFrame(raf);

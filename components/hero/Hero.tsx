@@ -13,7 +13,7 @@ export default function Hero() {
   const c = audit.company;
   return (
     <section className="relative isolate -mt-[100px] overflow-hidden pt-[100px] xl:-mt-14 xl:pt-14">
-      <div className="absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_55%,transparent_96%)]" aria-hidden>
+      <div className="no-print absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_55%,transparent_96%)]" aria-hidden>
         {/* Painted with the HTML, so the first frame already has its light; the canvas fades in over it. */}
         <div className="absolute inset-0 [background:radial-gradient(60%_70%_at_86%_38%,color-mix(in_oklab,var(--live)_34%,transparent),transparent_70%),radial-gradient(40%_50%_at_70%_80%,color-mix(in_oklab,var(--live)_16%,transparent),transparent_70%)]" />
         <HeroCanvas variant={hero.variant} />
@@ -37,7 +37,7 @@ export default function Hero() {
             <Fact fact={c.oneLiner} as="p" />
             <Fact fact={c.model} as="p" />
           </div>
-          <div className="u-rise mt-8 flex flex-wrap items-center gap-3">
+          <div className="no-print u-rise mt-8 flex flex-wrap items-center gap-3">
             <a
               href="#thesis"
               className="rounded-full bg-ink px-5 py-2.5 text-[14px] font-medium text-page transition-transform hover:scale-[1.02]"

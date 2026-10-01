@@ -132,7 +132,7 @@ export default function FlywheelHero() {
       frame: (t) => {
         const dt = Math.min(0.05, t - last);
         last = t;
-        rig.position.set(wide ? worldW * 0.24 : 0, wide ? 0.15 : 0.9, 0);
+        rig.position.set(wide ? worldW * 0.3 : 0, wide ? 0.15 : 0.9, 0);
         rig.scale.setScalar(wide ? 1 : 0.72);
         const k = 1 - Math.exp(-dt * 2.2);
         rig.rotation.y += (target.x * 0.35 + t * 0.03 - rig.rotation.y) * k;

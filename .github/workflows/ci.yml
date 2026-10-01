@@ -57,10 +57,14 @@ jobs:
       - run: npm run build
       - name: Lighthouse CI (median of five mobile runs)
         run: npx lhci autorun
+      - name: Scores to the job summary
+        if: always()
+        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse
           path: .lighthouseci
+          include-hidden-files: true
           if-no-files-found: ignore

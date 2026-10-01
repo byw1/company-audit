@@ -196,9 +196,22 @@ export default function Shell(props: ShellProps) {
         </nav>
       </header>
 
+      {/* Saved as PDF, the page still says whose read it is and how to reach them. */}
+      <div className="print-only mx-auto w-full max-w-[1320px] px-4 pt-2 pb-4 text-[11px] text-ink-3">
+        An outside-in read of <span className="font-medium text-ink">{company}</span> for the {role} role, by {author.name} · {researched}
+      </div>
+
       <main id="main" className="min-h-[70vh]">
         {children}
       </main>
+
+      <div className="print-only mx-auto mt-10 w-full max-w-[1320px] border-t border-line px-4 pt-4 text-[11px] leading-relaxed text-ink-3">
+        <p>
+          By {author.name} · {author.email} · {author.linkedin.replace(/^https?:\/\/(www\.)?/, "")}. Built from public sources only; not affiliated with or
+          endorsed by {company}. {researched}.
+        </p>
+        <div className="mt-2">{legend}</div>
+      </div>
 
       <footer className="chrome mt-16 border-t border-line-soft bg-inset/50">
         <div className="mx-auto w-full max-w-[1320px] px-4 py-10 sm:px-6 lg:px-8">
