@@ -45,7 +45,7 @@ const fileFor = (domain: string, size: number) => `${domain.replace(/[^a-z0-9.-]
 
 function collectDomains() {
   const out = new Map<string, string>(); // domain → why
-  out.set(normalise(config.company.domain), "company");
+  out.set(normalise(config.company.iconDomain ?? config.company.domain), "company");
   for (const c of competitors.field) if (!out.has(normalise(c.domain))) out.set(normalise(c.domain), `competitor: ${c.name}`);
   for (const s of sources.items) {
     const d = normalise(new URL(s.url).hostname);
@@ -156,7 +156,7 @@ async function main() {
   await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 
   // ── Accent ────────────────────────────────────────────────────────────────
-  const companyDomain = normalise(config.company.domain);
+  const companyDomain = normalise(config.company.iconDomain ?? config.company.domain);
   const company = entries[companyDomain];
   let theme: Theme;
   if (config.accent) {
@@ -175,6 +175,10 @@ async function main() {
   for (const r of rows) console.log("  " + r.map((c, i) => c.padEnd(widths[i])).join("  "));
   const icons = rows.filter((r) => r[1] === "icon").length;
   console.log(`\n  ${icons} icons, ${rows.length - icons} monograms`);
+  if (company?.status !== "icon" && !RESERVED.test(companyDomain))
+    console.log(
+      `\n  The company itself has no icon at ${companyDomain}. If another of its domains has one (an investor or regional site),\n  set company.iconDomain in content/audit.config.ts and run this again.`,
+    );
   const fmt = (m: Theme["light"], bg: string) =>
     `live ${m.live} (${contrast(m.live, bg).toFixed(1)}:1) · ink ${m.liveInk} (${contrast(m.liveInk, bg).toFixed(1)}:1)`;
   console.log(`\nAccent from ${theme.source}: ${theme.base}`);

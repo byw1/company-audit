@@ -25,6 +25,9 @@ leaving no fictional company, people or sources behind.
     location, `jdUrl`, `jdSource: "jd"`) and `researched` (this month, YYYY-MM);
   - choose a `hero.variant` (`shader`, `particles` or `flywheel`; give the
     flywheel three orbit names that mean something for this business);
+  - if `npm run logos` says the company's domain has no icon, set
+    `company.iconDomain` to one of its domains that has one (an investor or
+    regional site), or `accent` if the icon is greyscale;
   - turn modules on or off. Fit stays off unless I ask for it.
 - Check what Hired already knows: `list_applications` (search the company name)
   and `get_company` for any notes, contacts and the application. Build on that
@@ -45,6 +48,11 @@ leaving no fictional company, people or sources behind.
   today and a `note` saying it was confirmed on the index.
 
 ## 2. The company → `company.ts`, `role.ts`
+
+Company sites built as client-side apps return an empty shell to a plain
+fetch. Their text is usually readable in the site's own JavaScript bundle
+(`curl` the page, then the `/assets/*.js` it loads, and search it). Say so in
+the source's `note`.
 
 Sources, in order of trust: their own filings and investor materials, official
 site (about, team, newsroom), press releases, reputable press, funding
@@ -93,6 +101,11 @@ size, who the role reports to).
     it an outside-in read.
   - `direction`, `threatRead`, `response`. `response` is what this company
     should do about it.
+- A competitor with no dated public move in the last twelve months comes off
+  the map, however relevant. Say so in a `sources.ts` caveat rather than
+  inventing a heading.
+- Agency and startup sites make standing claims ("$500M+ managed"). A claim on
+  a page isn't a dated move; a launch, a round or an acquisition is.
 - `openings`: where the field leaves room.
 
 ## 5. Workflows → `workflows.ts`

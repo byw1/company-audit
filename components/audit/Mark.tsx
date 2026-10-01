@@ -8,7 +8,7 @@ import { CompanyLogo } from "./CompanyLogo";
  * (app/icon.tsx).
  */
 export function FramedMark({ size = 28 }: { size?: number }) {
-  const { domain, name } = audit.config.company;
+  const { domain, iconDomain, name } = audit.config.company;
   const dot = Math.max(7, Math.round(size * 0.3));
   return (
     <span
@@ -16,7 +16,7 @@ export function FramedMark({ size = 28 }: { size?: number }) {
       style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
       aria-hidden
     >
-      <CompanyLogo domain={domain} name={name} size={Math.round(size * 0.62)} tone="solid" />
+      <CompanyLogo domain={iconDomain ?? domain} name={name} size={Math.round(size * 0.62)} tone="solid" />
       <span
         className="absolute rounded-full bg-live ring-2 ring-page"
         style={{ width: dot, height: dot, top: -Math.round(dot * 0.3), right: -Math.round(dot * 0.3) }}
