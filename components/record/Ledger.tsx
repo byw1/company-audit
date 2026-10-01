@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 export interface LedgerRow {
   id: string;
@@ -25,7 +25,7 @@ export default function Ledger({ rows }: { rows: LedgerRow[] }) {
               type="button"
               onClick={() => setTheme(t)}
               aria-pressed={theme === t}
-              className={cn(
+              className={cx(
                 "rounded-md border px-2.5 py-1 text-[12.5px] transition-colors",
                 theme === t ? "border-ink bg-ink text-page" : "border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink",
               )}

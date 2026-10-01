@@ -2,7 +2,7 @@
 
 import { ArrowDownUp, ChevronRight } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 export interface MapPoint {
   id: string;
@@ -111,10 +111,10 @@ export function PositioningMap({ points, axes, compact = false }: { points: MapP
           const dim = hover !== null && hover !== p.id;
           const active = hover === p.id;
           return (
-            <a
+            <Mark
               key={p.id}
               href={p.self ? undefined : `#c-${p.id}`}
-              aria-label={`${p.name}${p.self ? " (the company)" : ""}: ${p.describe}`}
+              label={`${p.name}${p.self ? " (the company)" : ""}: ${p.describe}`}
               onMouseEnter={() => setHover(p.id)}
               onMouseLeave={() => setHover(null)}
               onFocus={() => setHover(p.id)}
@@ -135,7 +135,7 @@ export function PositioningMap({ points, axes, compact = false }: { points: MapP
               {/* A generous hit area: nobody should have to land on a dot. */}
               <circle cx={x1} cy={y1} r={16} fill="transparent" />
               <circle cx={x1} cy={y1} r={p.self ? 8 : 6} style={{ fill: p.self ? "var(--live)" : "var(--ink-2)", stroke: "var(--surface)", strokeWidth: 2 }} />
-            </a>
+            </Mark>
           );
         })}
         <g aria-hidden style={{ pointerEvents: "none" }}>
@@ -190,6 +190,42 @@ export function PositioningMap({ points, axes, compact = false }: { points: MapP
         </div>
       )}
     </div>
+  );
+}
+
+/** A competitor's mark links to its dossier; the company's own mark is just labelled. */
+function Mark({
+  href,
+  label,
+  children,
+  style,
+  className,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
+}: {
+  href?: string;
+  label: string;
+  children: ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+}) {
+  const handlers = { style, className, onMouseEnter, onMouseLeave, onFocus, onBlur };
+  if (href)
+    return (
+      <a href={href} aria-label={label} {...handlers}>
+        {children}
+      </a>
+    );
+  return (
+    <g role="img" aria-label={label} {...handlers}>
+      {children}
+    </g>
   );
 }
 
@@ -278,20 +314,20 @@ export function CompetitorTable({ rows }: { rows: CompetitorRow[] }) {
         type="button"
         onClick={() => setSort(k)}
         aria-pressed={sort === k}
-        className={cn("u-label inline-flex items-center gap-1 text-left transition-colors hover:text-ink", sort === k && "text-ink", className)}
+        className={cx("u-label inline-flex items-center gap-1 text-left transition-colors hover:text-ink", sort === k && "text-ink", className)}
       >
         {children}
-        <ArrowDownUp className={cn("size-3", sort === k ? "opacity-100" : "opacity-40")} aria-hidden />
+        <ArrowDownUp className={cx("size-3", sort === k ? "opacity-100" : "opacity-40")} aria-hidden />
       </button>
     ) : (
-      <span className={cn("u-label", className)}>{children}</span>
+      <span className={cx("u-label", className)}>{children}</span>
     );
 
   const grid = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 md:grid-cols-[minmax(12rem,1.3fr)_minmax(0,1.2fr)_7rem_6.5rem_minmax(0,0.8fr)_1rem]";
 
   return (
     <div className="u-card overflow-hidden">
-      <div className={cn(grid, "border-b border-line-soft bg-inset/60 px-4 py-2.5")}>
+      <div className={cx(grid, "border-b border-line-soft bg-inset/60 px-4 py-2.5")}>
         <Head k="name">Company</Head>
         <Head className="hidden md:inline-flex">Tags</Head>
         <Head k="latest" className="hidden md:inline-flex">
@@ -306,11 +342,11 @@ export function CompetitorTable({ rows }: { rows: CompetitorRow[] }) {
           <details
             key={r.id}
             id={`c-${r.id}`}
-            className={cn("group scroll-mt-28 transition-colors", hover === r.id && "bg-hover")}
+            className={cx("group scroll-mt-28 transition-colors", hover === r.id && "bg-hover")}
             onMouseEnter={() => setHover(r.id)}
             onMouseLeave={() => setHover(null)}
           >
-            <summary className={cn(grid, "cursor-pointer list-none px-4 py-3 hover:bg-hover [&::-webkit-details-marker]:hidden")}>
+            <summary className={cx(grid, "cursor-pointer list-none px-4 py-3 hover:bg-hover [&::-webkit-details-marker]:hidden")}>
               <span className="flex min-w-0 items-center gap-3">
                 {r.logo}
                 <span className="min-w-0">

@@ -5,11 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { chapterFor } from "@/lib/chapters";
 import { TLink, useMode, useToggleHref, withShare } from "@/lib/mode";
-import type { SearchItem } from "@/lib/search-types";
-import { cn } from "@/lib/utils";
-import CommandPalette from "./CommandPalette";
-import { SearchProvider } from "./search-context";
+import { cx } from "@/lib/cx";
+import dynamic from "next/dynamic";
 import SiteEffects from "./SiteEffects";
+import SourcePopover from "./SourcePopover";
 import ThemeToggle from "./ThemeToggle";
 
 export interface ShellChapter {
@@ -28,7 +27,6 @@ export interface ShellProps {
   /** The framed company mark, rendered on the server. */
   mark: ReactNode;
   chapters: ShellChapter[];
-  searchItems: SearchItem[];
   /** The claim-label legend, rendered on the server. */
   legend: ReactNode;
   /** <PrepLayer>: renders nothing unless the server decided this is the prep view. */
@@ -36,15 +34,19 @@ export interface ShellProps {
   children: ReactNode;
 }
 
+// cmdk and the dialog load on first use, not with every page.
+const CommandPalette = dynamic(() => import("./CommandPalette"), { ssr: false });
+
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 export default function Shell(props: ShellProps) {
-  const { company, role, author, researched, fictional, mark, chapters, searchItems, legend, prep, children } = props;
+  const { company, role, author, researched, fictional, mark, chapters, legend, prep, children } = props;
   const pathname = usePathname();
   const router = useRouter();
   const { share, prepAllowed } = useMode();
   const [open, setOpen] = useState(false);
+  const [paletteUsed, setPaletteUsed] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [present, setPresent] = useState(false);
 
@@ -110,10 +112,14 @@ export default function Shell(props: ShellProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, present, index, go, setPresenting]);
 
+  useEffect(() => {
+    if (open) setPaletteUsed(true);
+  }, [open]);
+
   const overHero = pathname === "/" && !scrolled;
 
   return (
-    <SearchProvider base={searchItems}>
+    <>
       <a
         href="#main"
         className="chrome sr-only z-50 rounded-md bg-ink px-3 py-2 text-[13px] text-page focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -122,13 +128,13 @@ export default function Shell(props: ShellProps) {
       </a>
 
       <header
-        className={cn(
+        className={cx(
           "chrome sticky top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-300",
           overHero ? "border-transparent bg-transparent" : "border-line-soft bg-page/80 backdrop-blur-xl backdrop-saturate-150",
         )}
       >
         <div className="mx-auto flex h-14 w-full max-w-[1320px] items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <TLink href="/" className="group flex min-w-0 items-center gap-2.5" aria-label={`An outside-in read of ${company}, by ${author.name}. Home`}>
+          <TLink href="/" className="group flex min-w-0 items-center gap-2.5">
             {mark}
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-[13px]">
@@ -146,7 +152,7 @@ export default function Shell(props: ShellProps) {
                 key={c.id}
                 href={c.href}
                 aria-current={current?.id === c.id ? "page" : undefined}
-                className={cn(
+                className={cx(
                   "rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
                   current?.id === c.id ? "bg-hover font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
                 )}
@@ -179,7 +185,7 @@ export default function Shell(props: ShellProps) {
               key={c.id}
               href={c.href}
               aria-current={current?.id === c.id ? "page" : undefined}
-              className={cn(
+              className={cx(
                 "shrink-0 rounded-md px-2.5 py-1 text-[12.5px] transition-colors",
                 current?.id === c.id ? "bg-ink text-page" : "text-ink-2 hover:bg-hover hover:text-ink",
               )}
@@ -190,9 +196,22 @@ export default function Shell(props: ShellProps) {
         </nav>
       </header>
 
+      {/* Saved as PDF, the page still says whose read it is and how to reach them. */}
+      <div className="print-only mx-auto w-full max-w-[1320px] px-4 pt-2 pb-4 text-[11px] text-ink-3">
+        An outside-in read of <span className="font-medium text-ink">{company}</span> for the {role} role, by {author.name} · {researched}
+      </div>
+
       <main id="main" className="min-h-[70vh]">
         {children}
       </main>
+
+      <div className="print-only mx-auto mt-10 w-full max-w-[1320px] border-t border-line px-4 pt-4 text-[11px] leading-relaxed text-ink-3">
+        <p>
+          By {author.name} · {author.email} · {author.linkedin.replace(/^https?:\/\/(www\.)?/, "")}. Built from public sources only; not affiliated with or
+          endorsed by {company}. {researched}.
+        </p>
+        <div className="mt-2">{legend}</div>
+      </div>
 
       <footer className="chrome mt-16 border-t border-line-soft bg-inset/50">
         <div className="mx-auto w-full max-w-[1320px] px-4 py-10 sm:px-6 lg:px-8">
@@ -223,7 +242,7 @@ export default function Shell(props: ShellProps) {
         </div>
       </footer>
 
-      <CommandPalette open={open} onOpenChange={setOpen} />
+      {(open || paletteUsed) && <CommandPalette open={open} onOpenChange={setOpen} />}
 
       {present && (
         <PresentHud
@@ -238,7 +257,8 @@ export default function Shell(props: ShellProps) {
 
       {prep}
       <SiteEffects />
-    </SearchProvider>
+      <SourcePopover />
+    </>
   );
 }
 
@@ -251,8 +271,8 @@ function ModeSwitch() {
       title={share ? "Previewing exactly what a recipient sees. Switch back to prep." : "Preview exactly what a recipient sees."}
       className="no-print ml-1 flex items-center rounded-lg border border-line bg-surface/70 p-0.5 text-[11.5px]"
     >
-      <span className={cn("rounded-md px-2 py-0.5", !share ? "bg-ink text-page" : "text-ink-3")}>Prep</span>
-      <span className={cn("rounded-md px-2 py-0.5", share ? "bg-live text-live-contrast" : "text-ink-3")}>Share</span>
+      <span className={cx("rounded-md px-2 py-0.5", !share ? "bg-ink text-page" : "text-ink-3")}>Prep</span>
+      <span className={cx("rounded-md px-2 py-0.5", share ? "bg-live text-live-contrast" : "text-ink-3")}>Share</span>
     </a>
   );
 }
@@ -292,7 +312,7 @@ function PresentHud({
 
   return (
     <div
-      className={cn(
+      className={cx(
         "no-print fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-surface/90 p-1 shadow-[var(--shadow-pop)] backdrop-blur-xl transition-opacity duration-500",
         awake ? "opacity-100" : "opacity-0",
       )}

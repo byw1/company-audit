@@ -25,3 +25,46 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+
+  verify-share:
+    name: verify:share (the share view leaks nothing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for the rendered-DOM check
+        run: npx playwright-core install --with-deps chromium
+      - name: Crawl the share view for anything from content/prep.ts
+        run: npm run verify:share
+        env:
+          # Lets the check say whether this repo is public without an API call.
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+
+  lighthouse:
+    name: Lighthouse (95+ performance and accessibility on /)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Lighthouse CI (median of five mobile runs)
+        run: npx lhci autorun
+      - name: Scores to the job summary
+        if: always()
+        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse
+          path: .lighthouseci
+          include-hidden-files: true
+          if-no-files-found: ignore

@@ -155,7 +155,7 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
-  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
 
   --shadow-card: var(--shadow-card);
   --shadow-pop: var(--shadow-pop);
@@ -285,13 +285,12 @@
 
 /* ── Motion ───────────────────────────────────────────────────────────────── */
 
+/* Movement only, never opacity: text must be visible from the first paint. */
 @keyframes riseIn {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
@@ -429,6 +428,16 @@ html[data-present] {
   }
   details > :not(summary) {
     display: block !important;
+  }
+  h1,
+  h2,
+  h3,
+  .u-label {
+    break-after: avoid;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
   }
   a[data-print-url]::after {
     content: " (" attr(data-print-url) ")";

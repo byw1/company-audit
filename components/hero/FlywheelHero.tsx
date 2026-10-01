@@ -1,7 +1,7 @@
 "use client";
 
 import * as THREE from "three";
-import { useCanvasLoop, type Palette } from "./useCanvasLoop";
+import { isSoftwareRenderer, useCanvasLoop, type Palette } from "./useCanvasLoop";
 
 /**
  * The business as a flywheel (ported from the SuperOrdinary audit): a core,
@@ -118,6 +118,7 @@ export default function FlywheelHero() {
 
     let last = 0;
     return {
+      still: isSoftwareRenderer(renderer.getContext()),
       resize: (w, h, dpr) => {
         renderer.setPixelRatio(dpr);
         renderer.setSize(w, h, false);
@@ -131,7 +132,7 @@ export default function FlywheelHero() {
       frame: (t) => {
         const dt = Math.min(0.05, t - last);
         last = t;
-        rig.position.set(wide ? worldW * 0.24 : 0, wide ? 0.15 : 0.9, 0);
+        rig.position.set(wide ? worldW * 0.3 : 0, wide ? 0.15 : 0.9, 0);
         rig.scale.setScalar(wide ? 1 : 0.72);
         const k = 1 - Math.exp(-dt * 2.2);
         rig.rotation.y += (target.x * 0.35 + t * 0.03 - rig.rotation.y) * k;

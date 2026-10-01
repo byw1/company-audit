@@ -13,7 +13,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 export type FlowStage = {
   id: string;
@@ -41,7 +41,7 @@ function StageNode({ data }: NodeProps<Node<StageData>>) {
   const leak = data.leak;
   return (
     <div
-      className={cn(
+      className={cx(
         "relative flex h-[92px] w-[184px] cursor-pointer flex-col justify-between rounded-xl border bg-surface px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-colors hover:border-line-strong",
         leak === "high" ? "border-live" : leak ? "border-ink-3/50" : "border-line",
       )}
@@ -56,7 +56,7 @@ function StageNode({ data }: NodeProps<Node<StageData>>) {
         <span className="truncate text-[11px] text-ink-3">{data.owner}</span>
         {leak && (
           <span
-            className={cn(
+            className={cx(
               "inline-flex shrink-0 items-center gap-1 rounded-[4px] px-1.5 py-px font-mono text-[9px] tracking-[0.08em] uppercase",
               leak === "high" ? "bg-live text-live-contrast" : "border border-ink-3/50 text-ink-2",
             )}

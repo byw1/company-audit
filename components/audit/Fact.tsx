@@ -33,46 +33,35 @@ export function ClaimLabel({ basis, compact = false, className }: { basis: Basis
   );
 }
 
-/** [3] links to a source, with a hover card naming it and when it was read. */
+/**
+ * [3] links to a source. Its title and dates ride along as data attributes;
+ * one shared popover (components/shell/SourcePopover) shows them on hover or
+ * focus, so a page with a hundred claims doesn't carry a hundred hidden cards.
+ */
 export function SourceRefs({ ids }: { ids: string[] }) {
   if (!ids.length) return null;
   return (
-    <span className="group/src relative inline-flex items-baseline gap-0.5">
+    <span className="relative -my-[4px] inline-flex items-baseline">
       {ids.map((id) => {
         const s = sourceById.get(id);
         const n = sourceNumber.get(id);
         if (!s) return null;
+        const meta = `${s.publisher}${s.published ? ` · ${formatDate(s.published)}` : ""} · accessed ${formatDate(s.accessed)} · ${hostOf(s.url)}`;
         return (
           <a
             key={id}
             href={s.url}
             target="_blank"
             rel="noreferrer noopener"
-            aria-label={`Source ${n}: ${s.title}, ${s.publisher}, accessed ${formatDate(s.accessed)}`}
-            className="u-num rounded-[3px] px-px text-[10.5px] text-ink-3 transition-colors hover:text-live-ink focus-visible:text-live-ink"
+            aria-label={`Source ${n}: ${s.title}`}
+            data-src-title={s.title}
+            data-src-meta={meta}
+            className="u-num inline-block min-w-6 rounded-[4px] px-[2px] py-[4px] text-center text-[10.5px] leading-[16px] text-ink-3 transition-colors hover:text-live-ink focus-visible:text-live-ink"
           >
             [{n}]
           </a>
         );
       })}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-40 hidden w-[min(19rem,80vw)] -translate-x-1/2 rounded-lg border border-line bg-surface p-2.5 text-left shadow-[var(--shadow-pop)] [@media(hover:hover)]:group-hover/src:block"
-      >
-        {ids.map((id) => {
-          const s = sourceById.get(id);
-          if (!s) return null;
-          return (
-            <span key={id} className="block py-1 not-first:mt-1 not-first:border-t not-first:border-line-soft">
-              <span className="block text-[12px] leading-snug font-medium text-ink">{s.title}</span>
-              <span className="mt-0.5 block font-mono text-[10px] tracking-[0.04em] text-ink-3">
-                {s.publisher}
-                {s.published ? ` · ${formatDate(s.published)}` : ""} · accessed {formatDate(s.accessed)} · {hostOf(s.url)}
-              </span>
-            </span>
-          );
-        })}
-      </span>
     </span>
   );
 }
