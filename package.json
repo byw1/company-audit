@@ -25,7 +25,14 @@
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "skill:zip": "node scripts/skill-zip.mjs"
+    "skill:zip": "node scripts/skill-zip.mjs",
+    "jd": "tsx scripts/jd.ts",
+    "author:save": "tsx scripts/author.ts save",
+    "author:load": "tsx scripts/author.ts load",
+    "new": "tsx scripts/new.ts",
+    "status": "tsx --conditions=react-server scripts/status.ts",
+    "deploy:cf": "tsx scripts/deploy-cloudflare.ts",
+    "template:update": "tsx scripts/template-update.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

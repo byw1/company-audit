@@ -7,3 +7,4 @@ app/icon.png merge=ours binary
 app/apple-icon.png merge=ours binary
 app/opengraph-image.png merge=ours binary
 app/opengraph-image.alt.txt merge=ours
+wrangler.jsonc merge=ours

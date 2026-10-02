@@ -18,17 +18,25 @@ file written and `npm run validate` passing. The template's Northwind
 Commerce example shows the shape of every file: replace it completely,
 leaving no fictional company, people or sources behind.
 
+`npm run status` is the checklist for all of this: run it before you start
+and after every step, and do what its "Next" says. It works out progress from
+the files, so you can stop and resume at any point.
+
 ## 0. Set up
 
-- If `content/prep.ts` doesn't exist, run `npm run prep:init`. It copies the
-  example prep (gitignored) and generates `PREP_KEY` and `PREP_SECRET` in
-  `.env.local`.
+- If `content/audit.config.ts` is still the fictional example, run:
+  `npm run new -- --company "<Company>" --domain <domain> --jd <JD URL>`.
+  It fetches the posting, checks the careers index, saves `content/jd.md` and
+  the `jd` source, writes the config, loads my author profile, names the
+  Worker and creates the prep secrets. If it says the role isn't on the
+  careers index, stop and tell me.
 - Read `content/author.md`. If it still has the template's placeholder
   comments, ask me for my rules and where my evidence lives, and fill it in.
-  Set `author` (name, email, LinkedIn) in `content/audit.config.ts` too.
+  Set `author` (name, email, LinkedIn) in `content/audit.config.ts` too, then
+  `npm run author:save` so the next audit starts with them.
 - In `content/audit.config.ts`:
-  - set `company` (name, domain, `fictional: false`), `role` (title, team,
-    location, `jdUrl`, `jdSource: "jd"`) and `researched` (this month, YYYY-MM);
+  - check what `new` filled in (team, location), and set `researched` to this
+    month if the research runs over;
   - choose a `hero.variant` (`shader`, `particles` or `flywheel`; give the
     flywheel three orbit names that mean something for this business);
   - if `npm run logos` says the company's domain has no icon, set
@@ -41,6 +49,9 @@ leaving no fictional company, people or sources behind.
   Build on that rather than starting cold.
 
 ## 1. Confirm the role is live, and save the JD
+
+`npm run new` does this for Ashby, Greenhouse and Lever boards. For any other
+board (or to re-check later, `npm run jd -- <URL> --save`):
 
 - Find the role on the company's **careers index** (the list page, or their ATS
   board), not just at the direct URL. Postings often stay reachable by URL after
@@ -183,6 +194,7 @@ npm run logos          # icons, the accent, and the favicon/link-preview images;
 npm run prep:seal      # encrypt content/prep.ts; commit content/prep.sealed.json
 npm run check
 npm run verify:share   # must pass
+npm run status         # everything above "Deployed" is ✓
 npm run dev            # read every page once, in the share view
 ```
 
@@ -194,5 +206,5 @@ Then report back with:
    original wording, what changed, and why.
 3. Open gaps: things you couldn't source, evidence of mine you couldn't find,
    and validation warnings left.
-4. Next: deploy (README → Deploy). Set `PREP_KEY` and `PREP_SECRET` as
-   secrets on the host; they're in `.env.local`.
+4. Next: `npm run deploy:cf -- --github` (after `npx wrangler login`). It
+   deploys to Cloudflare and sets the secrets. Railway is in README → Deploy.

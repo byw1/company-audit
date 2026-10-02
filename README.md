@@ -50,12 +50,41 @@ The skill does the most from Claude Code, which can run the commands.
 ```bash
 gh repo create <you>/acme-audit --template byw1/company-audit --public --clone
 cd acme-audit && npm install
-npm run prep:init                      # your private prep file + secrets in .env.local
-claude                                 # then: /new-audit Acme acme.com <JD URL>
+npm run new -- --company "Acme" --domain acme.com --jd https://jobs.ashbyhq.com/acme/…
+npm run status                         # the checklist, and what to do next
+claude                                 # then: /new-audit, and follow `npm run status`
 ```
 
-`/new-audit` is the full research playbook (`.claude/commands/new-audit.md`);
+`npm run new` fetches the posting and saves it verbatim. For Ashby,
+Greenhouse and Lever it also checks the role is still on the careers index.
+Then it writes the config, loads your author profile, names the Cloudflare
+Worker, and creates your prep secrets.
+
+`npm run status` then tracks the audit from setup to deploy, in 18 steps.
+It works progress out from the files, so you or Claude can stop and pick up
+any time:
+
+```
+  Mercor · Head of Operations Planning
+
+  ✓  1. Started for a real company and role
+  ✓  2. Your byline and rules (content/author.md)
+  …
+  ·  5. Research: company.ts  (still has the example)
+  …
+  5/18 done.
+  Next: Replace the fictional example in content/company.ts (/new-audit, step 2)
+```
+
+`/new-audit` is the full research playbook (`.claude/commands/new-audit.md`).
 `CLAUDE.md` holds the rules it follows.
+
+### Your profile, once
+
+Your byline (name, email, LinkedIn) and your rules (`content/author.md`: what
+must or mustn't be said about you, and where your evidence lives) are the same
+for every audit. Fill them in once and run `npm run author:save`. They go to
+`~/.config/company-audit/`, and every `npm run new` starts with them.
 
 ### By hand
 
@@ -63,7 +92,7 @@ Everything company-specific is in `content/`. Each file's example shows the
 shape, and `npm run validate` says exactly what's wrong:
 
 ```bash
-npm run prep:init     # once
+npm run new -- --company … --domain … --jd …   # or edit content/audit.config.ts and run npm run prep:init
 npm run dev           # http://localhost:3000; ?prep=<PREP_KEY from .env.local> unlocks prep
 npm run validate      # as you go
 npm run logos         # icons, accent, favicon and link-preview images
@@ -107,17 +136,21 @@ No R2, KV or database is needed: pages render per request from `content/`, and
 the images are static files.
 
 ```bash
-npx wrangler login
-# in wrangler.jsonc, rename "name" and the WORKER_SELF_REFERENCE service to e.g. acme-audit
-npx wrangler secret put PREP_KEY       # from .env.local
-npx wrangler secret put PREP_SECRET    # from .env.local
-npm run cf:deploy                      # → https://acme-audit.<your-subdomain>.workers.dev
+npx wrangler login                 # once per machine (or set CLOUDFLARE_API_TOKEN)
+npm run deploy:cf -- --github      # → https://acme-audit.<your-subdomain>.workers.dev
 ```
 
+`deploy:cf` refuses to ship stale sealed prep. Otherwise it:
+- builds and deploys the Worker (`npm run new` already named it `<company>-audit`);
+- sets `PREP_KEY` and `PREP_SECRET` from `.env.local` as the Worker's
+  secrets;
+- with `--github`, stores `PREP_SECRET` as a GitHub Actions secret, so CI
+  checks your real prep.
+
+Also:
 - `npm run cf:preview` runs the same build locally in Cloudflare's runtime.
-- **Custom domain:** add it in the Worker's settings, and set
-  `NEXT_PUBLIC_SITE_URL` (in `wrangler.jsonc` → `vars`) so link previews use
-  it.
+- **Custom domain:** add it in the Worker's settings. Link previews follow the
+  domain the site is served from, so there's nothing else to set.
 - **Deploy on every push:** connect the repo under Workers → your Worker →
   Settings → Builds, with build command `npx opennextjs-cloudflare build` and
   deploy command `npx opennextjs-cloudflare deploy`.
@@ -128,8 +161,7 @@ npm run cf:deploy                      # → https://acme-audit.<your-subdomain>
 
 1. **New project → Deploy from GitHub repo**, and pick your audit repo.
 2. **Variables:** add `PREP_KEY` and `PREP_SECRET` from `.env.local`.
-3. **Settings → Networking → Generate domain**, then **Redeploy** so link
-   previews use it. `RAILWAY_PUBLIC_DOMAIN` is read when the server starts.
+3. **Settings → Networking → Generate domain.**
 
 The defaults work: `npm run build`, then `npm run start`, which binds `$PORT`.
 
@@ -193,6 +225,8 @@ described, what stays off) go in `content/author.md`.
 ## Checks
 
 ```bash
+npm run status        # the whole checklist, and the next step
+npm run jd -- <URL>   # is the role still listed? Run it again the day before the interview
 npm run check         # validate + typecheck + lint
 npm run prep:status   # is the sealed prep current with content/prep.ts?
 npm run verify:share  # the share view leaks nothing
@@ -274,21 +308,14 @@ into `app/*.png`.
 
 ## Pulling template improvements into an older audit
 
-Audit repos start with unrelated histories. The first time:
-
 ```bash
-git config merge.ours.driver true
-git remote add template https://github.com/byw1/company-audit.git
-git fetch template
-git merge template/main --allow-unrelated-histories --no-commit -X theirs
-git checkout HEAD -- content public/logos app/icon.png app/apple-icon.png app/opengraph-image.png app/opengraph-image.alt.txt
-npm install && npm run check && npm run verify:share
-git commit -m "Pull template improvements"
+npm run template:update
 ```
 
-After that, `git fetch template && git merge template/main` is enough:
-`.gitattributes` keeps each audit's content, logos and images on its side. If
-the content schema changed, `npm run validate` says what to update.
+It adds the template as a remote, merges its latest `main`, and keeps
+everything that's yours: `content/`, `public/logos/`, the generated images and
+`wrangler.jsonc`. It commits only if `npm run check` passes afterwards. If the
+content schema changed, `npm run validate` says exactly what to update.
 
 ## Notes
 
