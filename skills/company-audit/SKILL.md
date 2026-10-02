@@ -1,125 +1,133 @@
 ---
 name: company-audit
-description: Build an outside-in audit site for a job interview — one company, read through one role — from the open-source company-audit template. Use when someone wants to research a company for an interview, "make an audit site", prep for an interview with a site they can share, or says "/company-audit <Company> <domain> <JD URL>". Creates the repo, researches the company with every claim sourced and labelled, writes encrypted interview prep, fact-checks it, and deploys to Cloudflare Workers or Railway.
+description: Build an outside-in audit site for a job interview — one company, read through one role — from the open-source company-audit template. Use when someone wants to research a company for an interview, "make an audit site", prep for an interview with a site they can share, says "/company-audit <Company> <domain> <JD URL>", or wants to resume or deploy an audit they've started. Creates the repo, researches the company with every claim sourced and labelled, writes encrypted interview prep, fact-checks it, and deploys to Cloudflare Workers.
 ---
 
 # company-audit
 
 You're building an **outside-in audit**: a small website about one company,
 read through one job. It shows how the business is set up, how the work in the
-role flows, what the company has said publicly, who it competes with, and
-what the candidate would do first. Every claim on it is labelled **Sourced**,
-**Outside-in read** or **Illustrative model**. Behind a key, the same site holds
-the candidate's interview prep, which is committed only in encrypted form, so
-the repo can be public.
+role flows, what the company has said publicly, who it competes with, and what
+the candidate would do first. Every claim is labelled **Sourced**,
+**Outside-in read** or **Illustrative model**. Behind a key, the same site
+holds the candidate's interview prep, committed only encrypted, so the repo
+can be public.
 
-The template does the heavy lifting: schemas, validation, the prep gate, a leak
-test, logos, deploy configs. Your job is research and writing, inside its
-rules.
+The template does the structure; you do the research and writing. It gives you
+three commands that drive everything:
 
-## What you need from the person
+- `npm run new`: start an audit from a posting URL. It fetches the job,
+  writes the config, loads the author's profile and makes the secrets.
+- `npm run status`: the checklist, from setup to deploy, and **the one thing
+  to do next**. Run it whenever you're unsure, and after every step. It works
+  out progress from the files, so a new session can pick up mid-audit.
+- `npm run deploy:cf`: build, deploy to Cloudflare, and set the secrets.
 
-Ask for anything missing, in one message:
+## 0. Resuming?
 
-1. **The company and the role**: company name, its domain, and the URL of the
-   job posting.
-2. **Who they are**: name, email and LinkedIn URL, for the site's byline. No
-   phone number.
-3. **Their rules and evidence**: anything that must or must not be said about
-   them, and where their record lives (a resume or "master context" file, a
-   LinkedIn export, a connected career workspace). Never use resumes they've
-   already sent as evidence.
-4. **Where it should live**: a GitHub account or org for the new repo, and
-   whether to deploy to Cloudflare Workers (default) or Railway.
+If the current directory is already an audit (`content/audit.config.ts` and
+`scripts/status.ts` exist), run `npm run status` and continue from its "Next".
+Skip to step 3.
 
-## 1. Get a repo from the template
+## 1. What you need
 
-If the current directory isn't already a company-audit repo (look for
-`content/audit.config.ts` and `scripts/verify-share.ts`):
+Ask in one message for anything you don't have:
+
+1. **The company and the job**: company name, its domain, and the posting URL.
+2. **The person**, only if `~/.config/company-audit/author.json` doesn't exist
+   yet:
+   - name, email and LinkedIn URL, for the byline (never a phone number);
+   - their rules: what must or mustn't be said about them;
+   - where their record lives: a resume or notes file, a LinkedIn export, a
+     connected career workspace.
+
+   Never use resumes they've already sent as evidence.
+3. **Where the repo goes**: a GitHub account or org.
+
+## 2. Create and start the audit
 
 ```bash
 gh repo create <owner>/<company>-audit --template byw1/company-audit --public --clone
-cd <company>-audit
-npm install
-npm run prep:init        # content/prep.ts (gitignored) + PREP_KEY and PREP_SECRET in .env.local
+cd <company>-audit && npm install
+npm run new -- --company "<Company>" --domain <domain> --jd <posting URL>
 ```
 
-Without the `gh` CLI, the person can press **Use this template** on
-github.com/byw1/company-audit, then clone their new repo.
+`new` stops and says so if the role isn't on the company's careers index.
+Check with the person before going on.
 
-Public is fine: prep is only ever committed encrypted. `.env.local` (with
-`PREP_SECRET`) and `content/prep.ts` are gitignored. Tell the person to save
-`PREP_KEY` and `PREP_SECRET` in their password manager.
+**First audit for this person?** Write their rules and evidence sources into
+`content/author.md`, and their byline into `content/audit.config.ts` →
+`author`. Then run `npm run author:save`. Every future audit starts with
+them.
 
-## 2. Write `content/author.md`
+Public is fine. `content/prep.ts` (the plain notes) and `.env.local` (the
+secrets) are gitignored, and `npm run verify:share` fails if prep is ever
+committed in plain text. Tell the person to save `PREP_KEY` and `PREP_SECRET`
+from `.env.local` in their password manager: without `PREP_SECRET` the sealed
+prep can't be opened.
 
-Fill it from step 3 of "What you need": their guardrails, where their evidence
-lives, what never to use. Set `author` in `content/audit.config.ts`. This file
-is public; keep private details out of it.
+## 3. Research, in the order `status` gives
 
-## 3. Run the research playbook
+Read `CLAUDE.md` first: it holds the hard content rules. Then follow
+`.claude/commands/new-audit.md` (in Claude Code, `/new-audit`) for each step
+`npm run status` points at:
 
-Read `CLAUDE.md` (the hard content rules), then follow
-`.claude/commands/new-audit.md` step by step. In Claude Code that's
-`/new-audit <Company> <domain> <JD URL>`. In short:
+1. company and role;
+2. the public record;
+3. competitors: four to eight, each with dated moves from the last twelve
+   months;
+4. the workflows the role owns;
+5. ideas that trace to evidence, and a 30/60/90 plan;
+6. prep in `content/prep.ts`, from the person's own evidence, then
+   `npm run prep:seal`;
+7. `/fact-check`: a separate fact-checker rates every claim BLOCKER, FIX or
+   NOTE. Fix every BLOCKER and FIX; it records the result in
+   `content/factcheck.md`.
 
-1. Confirm the role is live on the careers **index**, save the JD verbatim to
-   `content/jd.md`.
-2. The company, the role and its org, the public record, four to eight
-   competitors with dated moves, the workflows the role owns, ideas that each
-   trace to evidence, a 30/60/90 plan.
-3. Prep in `content/prep.ts`, from the person's own evidence only. Then
-   `npm run prep:seal`.
-4. A separate fact-check pass: the `fact-checker` subagent
-   (`.claude/agents/fact-checker.md`) rates every claim BLOCKER / FIX / NOTE.
-   Fix every BLOCKER and FIX.
-
-Run `npm run validate` after each file. It catches unlabelled figures, unknown
-sources, JD quotes that aren't verbatim, and ideas that trace to nothing.
+After each file, run `npm run validate`. It catches unlabelled figures,
+unknown sources, JD quotes that aren't verbatim, and ideas that trace to
+nothing. Each research file is done when `status` stops finding the template's
+fictional example in it.
 
 ## 4. Prove it
 
 ```bash
 npm run logos          # icons, accent, favicon and link-preview images (commit them)
-npm run prep:seal
-npm run check
 npm run verify:share   # builds the site and proves nothing from the prep leaks
+npm run status         # everything above "Deployed" should be ✓
 ```
 
-All must pass. Then `npm run dev`, open http://localhost:3000, and read every
-page once as a recruiter would. `?prep=<PREP_KEY>` unlocks the prep view;
-`?prep=off` locks it again.
+Then `npm run dev` and read every page once as a recruiter would.
+`?prep=<PREP_KEY>` unlocks the prep view; `?prep=off` locks it again.
 
 ## 5. Deploy
 
-**Cloudflare Workers** (default). The free plan allows 10 ms of CPU per
-request; if pages fail with error 1102, the site needs Workers Paid.
-
 ```bash
-npx wrangler login
-# rename "name" (and the self-reference service) in wrangler.jsonc to <company>-audit
-npx wrangler secret put PREP_KEY      # paste from .env.local
-npx wrangler secret put PREP_SECRET   # paste from .env.local
-npm run cf:deploy
+npx wrangler login                 # once per machine (or CLOUDFLARE_API_TOKEN)
+npm run deploy:cf -- --github      # deploy, set the Worker's secrets, and PREP_SECRET for CI
+git add -A && git commit -m "<Company> audit" && git push
 ```
 
-**Railway**: New project → Deploy from GitHub repo, add `PREP_KEY` and
-`PREP_SECRET` as variables, generate a domain, redeploy.
-
-For CI to check the real prep, add `PREP_SECRET` as a GitHub Actions secret.
+On the free plan Workers allow 10 ms of CPU per request. If pages fail with
+error 1102, the person needs Workers Paid. Railway also works (README →
+Deploy).
 
 ## 6. Report back
 
 1. The thesis in three lines, the numbers that matter, anything surprising.
 2. The fact-check table: every claim cut or changed, and why.
-3. Open gaps: what couldn't be sourced, evidence of theirs you couldn't find.
-4. The live URL, and the one-time unlock link `https://<url>/?prep=<PREP_KEY>`
-   (tell them not to share that one).
+3. Open gaps: what couldn't be sourced, and evidence of theirs you couldn't
+   find.
+4. The live URL, and how to unlock it once: `https://<url>/?prep=<PREP_KEY>`.
+   That link isn't for sharing.
+
+Before the interview, `npm run jd -- <posting URL>` re-checks that the role is
+still listed.
 
 ## Rules that never bend
 
 - No inside information, no invented quotes, no fabricated metrics. Anything
-  about how the company runs internally is an Outside-in read unless a public
+  about how the company runs internally is an Outside-in read, unless a public
   source says it.
 - Real numbers only, each with a source and a date. Never round up.
 - Never commit `content/prep.ts`, `.env.local` or `PREP_SECRET`.

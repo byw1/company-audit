@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { ClaimLegend } from "@/components/audit/Fact";
 import { FramedMark } from "@/components/audit/Mark";
@@ -13,16 +14,21 @@ import { getView } from "@/lib/view";
 
 const { company, role, author } = audit.config;
 
-// Without an absolute base, the link-preview image resolves against localhost
-// and the card breaks wherever the link gets pasted. Set the domain before the
-// build you intend to share (see README → Deploy).
-const host =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.RAILWAY_PUBLIC_DOMAIN
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-    : process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "http://localhost:3000");
+/**
+ * The site's absolute origin, for the link-preview image. An explicit
+ * NEXT_PUBLIC_SITE_URL wins (a custom domain); otherwise it's the host this
+ * request came in on, which is right on Railway, Cloudflare Workers or
+ * anywhere else, with nothing to configure.
+ */
+async function siteOrigin() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  const h = await headers();
+  const hostHeader = h.get("x-forwarded-host") ?? h.get("host");
+  if (!hostHeader) return "http://localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(hostHeader) ? "http" : "https");
+  return `${proto.split(",")[0]}://${hostHeader}`;
+}
 
 const TITLE = `${company.name}, an outside-in read`;
 const DESCRIPTION = `An outside-in read of ${company.name} for the ${role.title} role: how the business is set up, how the work flows, what they've said publicly, who they compete with, and what I'd do first. By ${author.name}.`;
@@ -30,15 +36,17 @@ const DESCRIPTION = `An outside-in read of ${company.name} for the ${role.title}
 // The view is decided per request (middleware.ts), so nothing is prerendered.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(host),
-  title: { default: TITLE, template: `%s · ${company.name}, an outside-in read` },
-  description: DESCRIPTION,
-  openGraph: { title: TITLE, description: DESCRIPTION, type: "website" },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
-  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
-  authors: [{ name: author.name }],
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    metadataBase: new URL(await siteOrigin()),
+    title: { default: TITLE, template: `%s · ${company.name}, an outside-in read` },
+    description: DESCRIPTION,
+    openGraph: { title: TITLE, description: DESCRIPTION, type: "website" },
+    twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
+    robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+    authors: [{ name: author.name }],
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

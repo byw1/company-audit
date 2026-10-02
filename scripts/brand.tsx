@@ -13,6 +13,7 @@ import themeJson from "@/content/generated/theme.json";
 import type { Theme } from "@/lib/color";
 import { initials, logoFor } from "@/lib/logos";
 import { loadPublic } from "./lib/audit";
+import { brandFingerprint } from "./lib/fingerprint";
 
 void React; // the scripts compile JSX with the classic runtime
 
@@ -223,6 +224,8 @@ async function main() {
     console.log(`  ✓ app/${file} (${(png.length / 1024).toFixed(0)} KB)`);
   }
   await writeFile(path.join(ROOT, "app", "opengraph-image.alt.txt"), `${audit.config.company.name}, an outside-in read`);
+  // What the images were drawn from, so `npm run status` can tell when they're stale.
+  await writeFile(path.join(ROOT, "content", "generated", "brand.json"), JSON.stringify({ inputs: brandFingerprint(audit.config) }, null, 2) + "\n");
 }
 
 main().catch((e) => {

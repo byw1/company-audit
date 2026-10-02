@@ -29,7 +29,7 @@
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import path from "node:path";
 import { isSealed, newSecret, seal, unseal } from "@/lib/prep/seal";
@@ -37,6 +37,8 @@ import { parsePrep } from "@/lib/schema/prep";
 import type { PublicAudit } from "@/lib/schema/public";
 import { loadPrepPlain, loadPublic, PREP_SEALED, readSealed } from "./lib/audit";
 import { envVar } from "./lib/env";
+import { contentFingerprint } from "./lib/fingerprint";
+import { exampleLeftovers } from "./lib/leftovers";
 
 const ROOT = process.cwd();
 const ARGS = new Set(process.argv.slice(2));
@@ -278,6 +280,9 @@ async function main() {
     process.exit(1);
   }
 
+  // Fingerprint the content before anything below re-seals it for the run.
+  const fingerprint = contentFingerprint();
+
   // The prep under test, and the secret the server will open it with.
   const original = existsSync(PREP_SEALED) ? readFileSync(PREP_SEALED, "utf8") : null;
   let secret = envVar("PREP_SECRET");
@@ -322,6 +327,13 @@ async function main() {
   for (const q of quoted)
     warnings.push(`The prep quotes text that's already in the public page code, so it isn't probed: “${q.text}” (from: ${q.from}). Fine if the talk track reads the page aloud; if not, that text shouldn't be in a public component.`);
   if (probes.length < 5) fail(`Only ${probes.length} probes: the prep is too thin to prove anything. Add real prep content.`);
+
+  // 0. A real audit carries nothing of the template's fictional example.
+  if (!audit.config.company.fictional) {
+    const left = exampleLeftovers();
+    for (const [file, hits] of Object.entries(left)) fail(`${file} still has the template's example in it (${hits.join(", ")}). Replace it before sending.`);
+    if (!Object.keys(left).length) log("  ✓ nothing left of the template's example");
+  }
 
   // 1. Git: repos are public, so only the sealed prep may ever be committed.
   if (git(["rev-parse", "--is-inside-work-tree"]) === "true") {
@@ -473,6 +485,9 @@ async function main() {
     process.exit(1);
   }
   log(`\n✓ verify:share passed in ${((Date.now() - t0) / 1000).toFixed(1)}s. The share view carries nothing from the prep.`);
+  // Remembered locally, so `npm run status` knows this content has passed.
+  mkdirSync(path.join(ROOT, ".verify"), { recursive: true });
+  writeFileSync(path.join(ROOT, ".verify", "last-pass.json"), JSON.stringify({ content: fingerprint, prep: prepFrom, at: new Date().toISOString() }, null, 2) + "\n");
 }
 
 main().catch((e) => {

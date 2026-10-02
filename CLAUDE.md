@@ -43,6 +43,9 @@ is in `content/audit.config.ts` and whose rules are in `content/author.md`.
 ## Commands
 
 ```bash
+npm run new -- --company "Acme" --domain acme.com --jd <URL>   # start an audit from a fresh template copy
+npm run status        # the checklist from setup to deploy, and the next step
+npm run jd -- <URL>   # is the role still on the careers index? (--save writes content/jd.md)
 npm run prep:init     # once: content/prep.ts from the example, PREP_KEY + PREP_SECRET in .env.local
 npm run validate      # schemas, labels, source ids, cross-references, dates, JD quotes
 npm run logos         # icons into public/logos, the accent, and the favicon/link-preview PNGs (commit the output)
@@ -50,11 +53,15 @@ npm run dev           # http://localhost:3000 — seals prep first; ?prep=<PREP_
 npm run prep:seal     # encrypt content/prep.ts → content/prep.sealed.json (prep:watch re-seals on save)
 npm run check         # validate + typecheck + lint
 npm run verify:share  # build, crawl the share view, prove nothing from the prep leaks
-npm run cf:deploy     # build for Cloudflare Workers and deploy (README → Deploy)
+npm run deploy:cf     # build, deploy to Cloudflare Workers, set the secrets (--github: CI secret too)
+npm run author:save   # save your byline and author.md as the profile every new audit starts with
+npm run template:update  # pull the template's improvements into this audit
 ```
 
 `/new-audit <Company> <domain> <JD URL>` runs the research playbook below and
-fills `content/`.
+fills `content/`. **When unsure what's next, run `npm run status`.** A real
+audit must end with nothing left of the fictional example (Northwind: `nw-`
+source ids, `.example` domains); `status` and `verify:share` both check.
 
 ## Content rules (hard)
 
