@@ -40,7 +40,12 @@ function fromB64url(s: string) {
 }
 
 async function keyFrom(secret: string) {
-  const raw = fromB64url(secret.trim());
+  let raw: Uint8Array;
+  try {
+    raw = fromB64url(secret.trim());
+  } catch {
+    raw = new Uint8Array(0);
+  }
   if (raw.length !== 32) throw new Error("PREP_SECRET must be 32 random bytes, base64url (run `npm run prep:init` to make one)");
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
