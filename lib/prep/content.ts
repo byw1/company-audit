@@ -1,4 +1,5 @@
 import "server-only";
+import examplePrep from "@/content/prep.example";
 import sealedFile from "@/content/prep.sealed.json";
 import { audit } from "@/lib/content";
 import { parsePrep, prepWarnings, type Prep } from "@/lib/schema/prep";
@@ -11,27 +12,37 @@ import { isSealed, unseal } from "./seal";
  * components/prep, nothing else (eslint.config.mjs enforces it).
  *
  * Returns null when nothing is sealed or the secret is missing or wrong; the
- * prep view then behaves as if there were no prep at all.
+ * prep view then behaves as if there were no prep at all. The one exception
+ * is the template's own fictional example: there, the plain example prep
+ * stands in, so anyone trying the template sees the whole prep view.
  */
 let cached: { secret: string; prep: Promise<Prep | null> } | null = null;
 
 export function getPrep(): Promise<Prep | null> {
-  const secret = process.env.PREP_SECRET;
-  if (!secret || !isSealed(sealedFile)) return Promise.resolve(null);
+  const secret = process.env.PREP_SECRET ?? "";
   if (cached?.secret !== secret) cached = { secret, prep: load(secret) };
   return cached.prep;
 }
 
 async function load(secret: string): Promise<Prep | null> {
-  if (!isSealed(sealedFile)) return null;
-  let json: string;
+  const raw = await open(secret);
+  if (raw === null) return audit.config.company.fictional ? check(examplePrep) : null;
+  return check(raw);
+}
+
+async function open(secret: string): Promise<unknown | null> {
+  if (!secret || !isSealed(sealedFile)) return null;
   try {
-    json = await unseal(sealedFile, secret);
+    return JSON.parse(await unseal(sealedFile, secret));
   } catch {
-    console.error("content/prep.sealed.json could not be decrypted with PREP_SECRET. Re-run `npm run prep:seal` with the secret this deploy uses.");
+    if (!audit.config.company.fictional)
+      console.error("content/prep.sealed.json could not be decrypted with PREP_SECRET. Re-run `npm run prep:seal` with the secret this deploy uses.");
     return null;
   }
-  const prep = parsePrep(JSON.parse(json), audit);
+}
+
+function check(raw: unknown): Prep {
+  const prep = parsePrep(raw, audit);
   const warnings = prepWarnings(prep, audit);
   if (warnings.length) console.warn(`\n${formatIssues(warnings)}\n`);
   return prep;

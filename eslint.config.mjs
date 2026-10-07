@@ -67,6 +67,7 @@ const config = [
       "content/prep.ts",
       "content/prep.example.ts",
       "scripts/**",
+      "tests/**",
     ],
     rules: { "no-restricted-imports": "off" },
   },
