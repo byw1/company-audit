@@ -20,6 +20,16 @@ the job link, and it researches, writes, fact-checks and deploys the site.
 The template ships with **Northwind Commerce, a fictional company**, as the
 example.
 
+**Live demo:** [the public site](https://site-production-7a10.up.railway.app),
+and [the same site in the prep view](https://site-production-7a10.up.railway.app/?prep=demo).
+The demo's key is `demo` because the company is invented. Yours will be a long
+random key.
+
+| | |
+| --- | --- |
+| ![The overview: the thesis, the numbers that matter, every claim labelled](docs/screenshots/overview.webp) | ![A workflow as a flowchart, with owners, leaks and sources](docs/screenshots/workflow.webp) |
+| ![The positioning map, in dark mode, with each competitor's direction of travel](docs/screenshots/competitors.webp) | ![The prep view: a talk track per chapter, for the person presenting](docs/screenshots/prep.webp) |
+
 ---
 
 ## Make one
@@ -327,6 +337,13 @@ content schema changed, `npm run validate` says exactly what to update.
   prep view to someone else.
 - `docs/first-audits.md` records the first two real audits built on the
   template, and what they changed.
+
+## Improving the template
+
+See `CONTRIBUTING.md`. In short:
+- framework changes go in `app/`, `components/`, `lib/` and `scripts/`;
+- keep the Northwind example coherent;
+- `npm run check`, `npm run verify:share` and `npm run cf:build` must pass.
 
 ## License
 
