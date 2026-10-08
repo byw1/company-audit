@@ -36,9 +36,9 @@ export function readSealed(): SealedFile {
   return JSON.parse(readFileSync(PREP_SEALED, "utf8"));
 }
 
-/** The sealed prep, decrypted with PREP_SECRET; null if there's nothing sealed or no secret. */
-export async function loadPrepSealed(secret = envVar("PREP_SECRET")): Promise<unknown | null> {
+/** The sealed prep, decrypted with PREP_KEY; null if there's nothing sealed or no key. */
+export async function loadPrepSealed(key = envVar("PREP_KEY")): Promise<unknown | null> {
   const sealed = readSealed();
-  if (!secret || !isSealed(sealed)) return null;
-  return JSON.parse(await unseal(sealed, secret));
+  if (!key || !isSealed(sealed)) return null;
+  return JSON.parse(await unseal(sealed, key));
 }

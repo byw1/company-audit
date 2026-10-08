@@ -4,10 +4,12 @@
  * Must pass before any link is sent. CI runs it on every push.
  *
  * 1. Builds the site (skip with --no-build when a fresh build already exists).
- * 2. Starts it with a throwaway PREP_KEY and the PREP_SECRET that opens the
- *    sealed prep. With no secret (CI without the repo secret), it seals your
- *    content/prep.ts, or failing that the template's example, with a
- *    throwaway secret for the run and puts the sealed file back afterwards.
+ * 2. Starts it with no prep variables at all, as a deploy runs. The prep under
+ *    test is the sealed file, opened with your PREP_KEY. Without the key, it
+ *    seals your content/prep.ts (or, for the template itself, the example)
+ *    with a throwaway key for the run and puts the sealed file back afterwards.
+ *    With neither (CI on a real audit: no plain prep, no key), it checks the
+ *    gate only, says so, and doesn't count as a full pass.
  * 3. Derives probes from every string in the prep, minus anything that also
  *    appears in public content.
  * 4. Crawls every route in the share view (no cookie, and the ?share preview
@@ -18,8 +20,8 @@
  *      - the RSC payload a client-side navigation would fetch,
  *      - the rendered DOM in a real browser, with the ⌘K palette open,
  *      - every JS and CSS chunk the build ships.
- * 5. Asserts the gate: /prep is 404 without the key, with a wrong key, in the
- *    share preview and after ?prep=off; 200 with the key.
+ * 5. Asserts the gate: /prep is 404 without the key, with a wrong key, with a
+ *    forged cookie, in the share preview and after ?prep=off; 200 with the key.
  * 6. Control: the same probes must be found in the prep view. If they aren't,
  *    the probes are dead and the test fails rather than passing silently.
  * 7. Git hygiene: fails if content/prep.ts is tracked (repos are public; only
@@ -32,7 +34,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import path from "node:path";
-import { isSealed, newSecret, seal, unseal } from "@/lib/prep/seal";
+import { isSealed, isSealedV1, newKey, seal, unseal } from "@/lib/prep/seal";
 import { parsePrep } from "@/lib/schema/prep";
 import type { PublicAudit } from "@/lib/schema/public";
 import { loadPrepPlain, loadPublic, PREP_SEALED, readSealed } from "./lib/audit";
@@ -43,7 +45,6 @@ import { exampleLeftovers } from "./lib/leftovers";
 const ROOT = process.cwd();
 const ARGS = new Set(process.argv.slice(2));
 const VERBOSE = ARGS.has("--verbose");
-const KEY = `verify-${randomBytes(12).toString("hex")}`;
 
 const failures: string[] = [];
 const warnings: string[] = [];
@@ -142,9 +143,11 @@ async function freePort(): Promise<number> {
 
 async function startServer(port: number): Promise<ChildProcess> {
   const bin = path.join(ROOT, "node_modules", ".bin", "next");
+  // No prep variables, as on a real host: the visitor brings the key.
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^PREP_/.test(k)));
   const child = spawn(bin, ["start", "-p", String(port), "-H", "127.0.0.1"], {
     cwd: ROOT,
-    env: { ...process.env, PREP_KEY: KEY, PREP_SECRET: SECRET, NODE_ENV: "production", PORT: String(port) },
+    env: { ...env, NODE_ENV: "production", PORT: String(port) },
     stdio: VERBOSE ? "inherit" : "ignore",
   });
   const deadline = Date.now() + 60_000;
@@ -162,7 +165,7 @@ async function startServer(port: number): Promise<ChildProcess> {
 // ── HTTP helpers ─────────────────────────────────────────────────────────────
 
 let BASE = "";
-let SECRET = "";
+let KEY = "";
 
 async function get(p: string, opts: { cookie?: string; rsc?: boolean } = {}) {
   const headers: Record<string, string> = {};
@@ -283,50 +286,60 @@ async function main() {
   // Fingerprint the content before anything below re-seals it for the run.
   const fingerprint = contentFingerprint();
 
-  // The prep under test, and the secret the server will open it with.
+  // The prep under test, and the key that opens it. The server gets no key:
+  // like a visitor, this run brings it, as ?prep=<key>.
   const original = existsSync(PREP_SEALED) ? readFileSync(PREP_SEALED, "utf8") : null;
-  let secret = envVar("PREP_SECRET");
+  const sealed = readSealed();
+  const key = envVar("PREP_KEY");
   let prepRaw: unknown = null;
   let prepFrom = "";
-  const sealed = readSealed();
-  if (secret && isSealed(sealed)) {
+  if (isSealedV1(sealed))
+    fail("content/prep.sealed.json is in the old format, which needed a server secret, so a deploy can't open it. Run `npm run prep:seal`.");
+  if (key && isSealed(sealed)) {
     try {
-      prepRaw = JSON.parse(await unseal(sealed, secret));
+      prepRaw = JSON.parse(await unseal(sealed, key));
       prepFrom = "content/prep.sealed.json";
+      KEY = key;
     } catch {
-      fail("content/prep.sealed.json doesn't open with this PREP_SECRET. Run `npm run prep:seal`.");
+      fail("content/prep.sealed.json doesn't open with this PREP_KEY. Run `npm run prep:seal`.");
     }
     const plain = await loadPrepPlain();
     if (plain && prepRaw && JSON.stringify(parsePrep(plain.raw, audit)) !== JSON.stringify(parsePrep(prepRaw, audit)))
       warnings.push("content/prep.sealed.json is older than content/prep.ts, so a deploy would show stale prep. Run `npm run prep:seal`.");
   }
   if (!prepRaw) {
-    // No secret here (CI without the repo secret): seal the plain prep for this run only.
-    const plain = await loadPrepPlain({ allowExample: true });
-    if (!plain) {
-      console.error("No prep to test: no PREP_SECRET for content/prep.sealed.json and no content/prep.ts.");
-      process.exit(1);
+    // No key here, or nothing sealed yet: seal the plain prep with a throwaway key, for this run only.
+    // The example only stands in for the template itself: a real audit's content wouldn't match it.
+    const plain = await loadPrepPlain({ allowExample: !!audit.config.company.fictional });
+    if (plain) {
+      prepRaw = plain.raw;
+      prepFrom = path.relative(ROOT, plain.file);
+      KEY = newKey();
+      writeFileSync(PREP_SEALED, JSON.stringify(await seal(JSON.stringify(parsePrep(prepRaw, audit)), KEY), null, 2) + "\n");
     }
-    if (plain.file.endsWith("prep.example.ts") && !audit.config.company.fictional)
-      warnings.push("No PREP_SECRET, so this run checked the boundary with the template's example prep, not yours. Add PREP_SECRET as a repo secret so CI checks your real notes.");
-    prepRaw = plain.raw;
-    prepFrom = path.relative(ROOT, plain.file);
-    secret = newSecret();
-    writeFileSync(PREP_SEALED, JSON.stringify(await seal(JSON.stringify(parsePrep(prepRaw, audit)), secret), null, 2) + "\n");
   }
   const restore = () => {
     if (original === null) return;
     if (readFileSync(PREP_SEALED, "utf8") !== original) writeFileSync(PREP_SEALED, original);
   };
   process.on("exit", restore);
-  SECRET = secret!;
 
-  const prep = parsePrep(prepRaw, audit);
-  const { probes, shared, quoted } = buildProbes(prep, normalise([...strings(audit)].join(" | ")), publicSourceCorpus());
-  log(`  ${probes.length} probes from ${prepFrom} (${shared + quoted.length} skipped because the same words are already public)`);
-  for (const q of quoted)
-    warnings.push(`The prep quotes text that's already in the public page code, so it isn't probed: “${q.text}” (from: ${q.from}). Fine if the talk track reads the page aloud; if not, that text shouldn't be in a public component.`);
-  if (probes.length < 5) fail(`Only ${probes.length} probes: the prep is too thin to prove anything. Add real prep content.`);
+  // No plain prep and no key (CI on a real audit): the gate can be checked, the words can't.
+  const full = prepRaw !== null;
+  let probes: Probe[] = [];
+  if (full) {
+    const prep = parsePrep(prepRaw, audit);
+    const built = buildProbes(prep, normalise([...strings(audit)].join(" | ")), publicSourceCorpus());
+    probes = built.probes;
+    log(`  ${probes.length} probes from ${prepFrom} (${built.shared + built.quoted.length} skipped because the same words are already public)`);
+    for (const q of built.quoted)
+      warnings.push(`The prep quotes text that's already in the public page code, so it isn't probed: “${q.text}” (from: ${q.from}). Fine if the talk track reads the page aloud; if not, that text shouldn't be in a public component.`);
+    if (probes.length < 5) fail(`Only ${probes.length} probes: the prep is too thin to prove anything. Add real prep content.`);
+  } else {
+    prepFrom = "(not opened)";
+    log("  no PREP_KEY or content/prep.ts here, so this run checks the gate but can't look for your prep's words");
+    warnings.push("This was a gate-only run: without PREP_KEY or content/prep.ts, nothing could open your prep to probe for it. Run `npm run verify:share` on your machine before sending; `npm run status` counts only that full pass.");
+  }
 
   // 0. A real audit carries nothing of the template's fictional example.
   if (!audit.config.company.fictional) {
@@ -363,7 +376,7 @@ async function main() {
       fail(`LEAK in ${h.route}: “${h.probe.text}” (from: ${h.probe.from})`);
     }
   }
-  log(`  ${chunkHits ? "✗" : "✓"} ${chunks.length} static chunks scanned`);
+  if (full) log(`  ${chunkHits ? "✗" : "✓"} ${chunks.length} static chunks scanned`);
 
   // 4. Serve it.
   const port = await freePort();
@@ -403,75 +416,85 @@ async function main() {
       shareHits.push(...scan(page.body, probes, "server HTML", r));
       if (page.status !== 404) fail(`${r} returned ${page.status} without the key; it must be 404`);
     }
-    log(`  ${shareHits.length ? "✗" : "✓"} share view: ${routes.length} routes × server HTML + RSC payload`);
+    log(`  ${shareHits.length ? "✗" : "✓"} share view: ${routes.length} routes${full ? " × server HTML + RSC payload" : " respond, /prep is 404"}`);
 
-    // 5. The gate.
-    const cookie = await prepCookie();
-    const gate: [string, Promise<{ status: number }>, number][] = [
-      ["/prep with the key", get("/prep", { cookie }), 200],
-      ["/prep/notes with the key", get("/prep/notes", { cookie }), 200],
-      ["/prep?share (share preview)", get("/prep?share", { cookie }), 404],
-      ["/prep/notes?share (share preview)", get("/prep/notes?share", { cookie }), 404],
-      ["/prep/search-index with the key", get("/prep/search-index", { cookie }), 200],
-      ["/prep/search-index?share (share preview)", get("/prep/search-index?share", { cookie }), 404],
-    ];
-    for (const [label, p, want] of gate) {
-      const { status } = await p;
-      if (status !== want) fail(`${label} returned ${status}, expected ${want}`);
+    // 5. The gate. Cookies that aren't the derived key open nothing: the raw
+    // PREP_KEY, a well-formed random key, a stale or tampered value.
+    const beforeGate = failures.length;
+    const forgeries = [`audit_prep=${randomBytes(32).toString("base64url")}`, "audit_prep=1", ...(KEY ? [`audit_prep=${KEY}`] : [])];
+    for (const forged of forgeries) {
+      const r = await get("/prep", { cookie: forged });
+      if (r.status !== 404) fail(`A forged cookie (${forged.slice(0, 24)}…) unlocked /prep`);
     }
-    const wrong = await fetch(`${BASE}/?prep=not-the-key`, { headers: { cookie }, redirect: "manual" });
-    const cleared = /audit_prep=;|audit_prep=(?:;|$)|Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(wrong.headers.get("set-cookie") ?? "");
-    if (!cleared) fail("A wrong ?prep= key didn't clear the prep cookie");
-    const off = await fetch(`${BASE}/?prep=off`, { headers: { cookie }, redirect: "manual" });
-    if (!/Max-Age=0|Expires=Thu, 01 Jan 1970|audit_prep=;/i.test(off.headers.get("set-cookie") ?? "")) fail("?prep=off didn't clear the prep cookie");
-    const forged = await get("/prep", { cookie: `audit_prep=${KEY}` });
-    if (forged.status !== 404) fail("A cookie holding the raw key (not its digest) unlocked /prep");
-    log(`  ${failures.some((f) => f.includes("returned") || f.includes("cookie")) ? "✗" : "✓"} gate: 404 without the key, with a forged cookie and in the share preview; 200 with the key; wrong key and ?prep=off clear the cookie`);
+    const stray = await fetch(`${BASE}/?prep=not-the-key`, { headers: { cookie: forgeries[0] }, redirect: "manual" });
+    if (!/Max-Age=0|Expires=Thu, 01 Jan 1970|audit_prep=;/i.test(stray.headers.get("set-cookie") ?? "")) fail("A wrong ?prep= key didn't clear the prep cookie");
+    if (!full) log(`  ${failures.length > beforeGate ? "✗" : "✓"} gate: 404 without the key and with forged cookies; a wrong key clears the cookie`);
+    else {
+      const cookie = await prepCookie();
+      const gate: [string, Promise<{ status: number }>, number][] = [
+        ["/prep with the key", get("/prep", { cookie }), 200],
+        ["/prep/notes with the key", get("/prep/notes", { cookie }), 200],
+        ["/prep?share (share preview)", get("/prep?share", { cookie }), 404],
+        ["/prep/notes?share (share preview)", get("/prep/notes?share", { cookie }), 404],
+        ["/prep/search-index with the key", get("/prep/search-index", { cookie }), 200],
+        ["/prep/search-index?share (share preview)", get("/prep/search-index?share", { cookie }), 404],
+      ];
+      for (const [label, p, want] of gate) {
+        const { status } = await p;
+        if (status !== want) fail(`${label} returned ${status}, expected ${want}`);
+      }
+      const wrong = await fetch(`${BASE}/?prep=not-the-key`, { headers: { cookie }, redirect: "manual" });
+      const cleared = /audit_prep=;|audit_prep=(?:;|$)|Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(wrong.headers.get("set-cookie") ?? "");
+      if (!cleared) fail("A wrong ?prep= key didn't clear the prep cookie");
+      const off = await fetch(`${BASE}/?prep=off`, { headers: { cookie }, redirect: "manual" });
+      if (!/Max-Age=0|Expires=Thu, 01 Jan 1970|audit_prep=;/i.test(off.headers.get("set-cookie") ?? "")) fail("?prep=off didn't clear the prep cookie");
+      log(`  ${failures.length > beforeGate ? "✗" : "✓"} gate: 404 without the key, with forged cookies and in the share preview; 200 with the key; wrong key and ?prep=off clear the cookie`);
 
-    // The share preview (key holder, ?share) must be exactly the public view.
-    const previewHits: Hit[] = [];
-    {
-      const idx = await get("/search-index?share", { cookie });
-      previewHits.push(...scan(idx.body, probes, "share preview search index", "/search-index"));
-    }
-    for (const r of routes) {
-      const sep = r.includes("?") ? "&" : "?";
-      const page = await get(`${r}${sep}share`, { cookie });
-      previewHits.push(...scan(page.body, probes, "share preview HTML", r));
-      const rsc = await get(`${r}${sep}share`, { cookie, rsc: true });
-      previewHits.push(...scan(rsc.body, probes, "share preview RSC", r));
-    }
-    log(`  ${previewHits.length ? "✗" : "✓"} share preview (key holder, ?share): ${routes.length} routes`);
+      // The share preview (key holder, ?share) must be exactly the public view.
+      const previewHits: Hit[] = [];
+      {
+        const idx = await get("/search-index?share", { cookie });
+        previewHits.push(...scan(idx.body, probes, "share preview search index", "/search-index"));
+      }
+      for (const r of routes) {
+        const sep = r.includes("?") ? "&" : "?";
+        const page = await get(`${r}${sep}share`, { cookie });
+        previewHits.push(...scan(page.body, probes, "share preview HTML", r));
+        const rsc = await get(`${r}${sep}share`, { cookie, rsc: true });
+        previewHits.push(...scan(rsc.body, probes, "share preview RSC", r));
+      }
+      log(`  ${previewHits.length ? "✗" : "✓"} share preview (key holder, ?share): ${routes.length} routes`);
 
-    // 6. Rendered DOM, in a real browser.
-    const domShare = await domCheck(routes, probes, null, "");
-    if (domShare.skipped) warnings.push(`DOM check skipped: ${domShare.skipped}. CI must run it.`);
-    else log(`  ${domShare.hits.length ? "✗" : "✓"} rendered DOM (palette open): ${routes.length} routes`);
+      // 6. Rendered DOM, in a real browser.
+      const domShare = await domCheck(routes, probes, null, "");
+      if (domShare.skipped) warnings.push(`DOM check skipped: ${domShare.skipped}. CI must run it.`);
+      else log(`  ${domShare.hits.length ? "✗" : "✓"} rendered DOM (palette open): ${routes.length} routes`);
 
-    for (const h of [...shareHits, ...previewHits, ...domShare.hits]) fail(`LEAK in ${h.where} at ${h.route}: “${h.probe.text}” (from: ${h.probe.from})`);
+      for (const h of [...shareHits, ...previewHits, ...domShare.hits]) fail(`LEAK in ${h.where} at ${h.route}: “${h.probe.text}” (from: ${h.probe.from})`);
 
-    // 7. Control: the probes must be live.
-    const prepFound = new Set<string>();
-    for (const r of ["/prep", "/prep/notes", "/prep/search-index", ...routes]) {
-      const page = await get(r, { cookie });
-      for (const h of scan(page.body, probes, "prep HTML", r)) prepFound.add(h.probe.text);
-      const rsc = await get(r, { cookie, rsc: true });
-      for (const h of scan(rsc.body, probes, "prep RSC", r)) prepFound.add(h.probe.text);
+      // 7. Control: the probes must be live.
+      const prepFound = new Set<string>();
+      for (const r of ["/prep", "/prep/notes", "/prep/search-index", ...routes]) {
+        const page = await get(r, { cookie });
+        for (const h of scan(page.body, probes, "prep HTML", r)) prepFound.add(h.probe.text);
+        const rsc = await get(r, { cookie, rsc: true });
+        for (const h of scan(rsc.body, probes, "prep RSC", r)) prepFound.add(h.probe.text);
+      }
+      const domPrep = domShare.skipped ? null : await domCheck(["/prep"], probes, cookie, "");
+      const coverage = prepFound.size / Math.max(1, probes.length);
+      const missing = probes.filter((p) => !prepFound.has(p.text));
+      if (coverage < 0.9) {
+        fail(
+          `CONTROL FAILED: only ${prepFound.size} of ${probes.length} probes appear in the prep view. The probes don't match how the page renders, so a pass would prove nothing. Missing, e.g.: ${missing
+            .slice(0, 3)
+            .map((m) => `“${m.text}”`)
+            .join(", ")}`,
+        );
+      }
+      if (domPrep && domPrep.found.size === 0) fail("CONTROL FAILED: the rendered /prep page contains none of the probes");
+      log(`  ${coverage >= 0.9 ? "✓" : "✗"} control: ${prepFound.size}/${probes.length} probes found in the prep view${domPrep ? `, ${domPrep.found.size} in its rendered DOM` : ""}`);
+      if (VERBOSE && missing.length) for (const m of missing) log(`      not found in prep view: “${m.text}”`);
     }
-    const domPrep = domShare.skipped ? null : await domCheck(["/prep"], probes, cookie, "");
-    const coverage = prepFound.size / Math.max(1, probes.length);
-    const missing = probes.filter((p) => !prepFound.has(p.text));
-    if (coverage < 0.9) {
-      fail(
-        `CONTROL FAILED: only ${prepFound.size} of ${probes.length} probes appear in the prep view. The probes don't match how the page renders, so a pass would prove nothing. Missing, e.g.: ${missing
-          .slice(0, 3)
-          .map((m) => `“${m.text}”`)
-          .join(", ")}`,
-      );
-    }
-    if (domPrep && domPrep.found.size === 0) fail("CONTROL FAILED: the rendered /prep page contains none of the probes");
-    log(`  ${coverage >= 0.9 ? "✓" : "✗"} control: ${prepFound.size}/${probes.length} probes found in the prep view${domPrep ? `, ${domPrep.found.size} in its rendered DOM` : ""}`);
-    if (VERBOSE && missing.length) for (const m of missing) log(`      not found in prep view: “${m.text}”`);
   } finally {
     server.kill();
   }
@@ -484,10 +507,12 @@ async function main() {
     for (const f of [...new Set(failures)]) log(`  ✗ ${f}`);
     process.exit(1);
   }
-  log(`\n✓ verify:share passed in ${((Date.now() - t0) / 1000).toFixed(1)}s. The share view carries nothing from the prep.`);
+  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  if (full) log(`\n✓ verify:share passed in ${secs}s. The share view carries nothing from the prep.`);
+  else log(`\n✓ verify:share (gate only) passed in ${secs}s. The gate holds; your prep's words were not checked.`);
   // Remembered locally, so `npm run status` knows this content has passed.
   mkdirSync(path.join(ROOT, ".verify"), { recursive: true });
-  writeFileSync(path.join(ROOT, ".verify", "last-pass.json"), JSON.stringify({ content: fingerprint, prep: prepFrom, at: new Date().toISOString() }, null, 2) + "\n");
+  writeFileSync(path.join(ROOT, ".verify", "last-pass.json"), JSON.stringify({ content: fingerprint, prep: prepFrom, full, at: new Date().toISOString() }, null, 2) + "\n");
 }
 
 main().catch((e) => {

@@ -7,7 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "tsx --conditions=react-server scripts/prep.ts seal --if-present && next dev",
+    "dev": "tsx --conditions=react-server scripts/prep.ts seal --if-present --link && next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
@@ -32,6 +32,8 @@
     "new": "tsx scripts/new.ts",
     "status": "tsx --conditions=react-server scripts/status.ts",
     "deploy:cf": "tsx scripts/deploy-cloudflare.ts",
+    "deploy:railway": "tsx scripts/deploy-railway.ts",
+    "deployed": "tsx scripts/deployed.ts",
     "template:update": "tsx scripts/template-update.ts",
     "test": "tsx --conditions=react-server --test tests/*.test.ts"
   },

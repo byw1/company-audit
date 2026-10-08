@@ -9,10 +9,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { isSealed, unseal } from "@/lib/prep/seal";
+import { isSealed, isSealedV1, unseal, weakKey } from "@/lib/prep/seal";
 import { loadPrepPlain, rawPublic, readSealed, PREP_EXAMPLE } from "./lib/audit";
 import { envVar, readEnvLocal } from "./lib/env";
-import { workerName } from "./lib/config";
 import { brandFingerprint, contentFingerprint } from "./lib/fingerprint";
 import { exampleLeftovers } from "./lib/leftovers";
 import { isPlaceholderAuthor, isPlaceholderAuthorMd } from "./lib/profile";
@@ -54,9 +53,10 @@ async function steps(): Promise<Step[]> {
 
   const env = readEnvLocal();
   add({
-    id: "secrets",
-    label: "Prep secrets in .env.local",
-    done: !!env.PREP_KEY && !!env.PREP_SECRET && existsSync(path.join(ROOT, "content", "prep.ts")),
+    id: "key",
+    label: "Prep key in .env.local (PREP_KEY, yours alone)",
+    done: !!env.PREP_KEY && !weakKey(env.PREP_KEY) && existsSync(path.join(ROOT, "content", "prep.ts")),
+    detail: env.PREP_KEY && weakKey(env.PREP_KEY) ? `too weak: ${weakKey(env.PREP_KEY)}` : undefined,
     next: "npm run prep:init",
   });
 
@@ -117,18 +117,24 @@ async function steps(): Promise<Step[]> {
   });
 
   const sealed = readSealed();
-  const secret = envVar("PREP_SECRET");
+  const key = envVar("PREP_KEY");
   let sealedCurrent = false;
-  if (isSealed(sealed) && secret && plain) {
+  if (isSealed(sealed) && key && plain) {
     try {
       const { parsePrep } = await import("@/lib/schema/prep");
       const { loadPublic } = await import("./lib/audit");
-      sealedCurrent = (await unseal(sealed, secret)) === JSON.stringify(parsePrep(plain.raw, loadPublic().audit));
+      sealedCurrent = (await unseal(sealed, key)) === JSON.stringify(parsePrep(plain.raw, loadPublic().audit));
     } catch {
       sealedCurrent = false;
     }
   }
-  add({ id: "sealed", label: "Prep sealed and current (content/prep.sealed.json)", done: sealedCurrent, next: "npm run prep:seal" });
+  add({
+    id: "sealed",
+    label: "Prep sealed and current (content/prep.sealed.json)",
+    done: sealedCurrent,
+    detail: isSealedV1(sealed) ? "the old format, which needed a server secret" : undefined,
+    next: "npm run prep:seal",
+  });
 
   const brand = read("content/generated/brand.json");
   const brandOk = !!brand && JSON.parse(brand).inputs === brandFingerprint(config);
@@ -149,12 +155,14 @@ async function steps(): Promise<Step[]> {
 
   const pass = read(".verify/last-pass.json");
   const passed = pass ? JSON.parse(pass) : null;
-  const passOk = !!passed && passed.content === contentFingerprint() && !String(passed.prep).includes("example");
+  // Only a run that opened your own prep counts: CI checks the gate without the key.
+  const fullPass = !!passed && passed.full !== false && !String(passed.prep).includes("example");
+  const passOk = fullPass && passed.content === contentFingerprint();
   add({
     id: "verify",
     label: "verify:share passed on this content",
     done: passOk,
-    detail: passed && !passOk ? `last pass ${passed.at.slice(0, 10)}, content changed since` : undefined,
+    detail: passed && !passOk ? (fullPass ? `last pass ${passed.at.slice(0, 10)}, content changed since` : "the last pass couldn't open your prep") : undefined,
     next: "npm run verify:share",
   });
 
@@ -163,8 +171,8 @@ async function steps(): Promise<Step[]> {
     id: "deploy",
     label: "Deployed",
     done: !!deploy,
-    detail: deploy ? JSON.parse(deploy).url : `Cloudflare Worker "${workerName()}"`,
-    next: "npm run deploy:cf (Cloudflare) or Railway (README → Deploy)",
+    detail: deploy ? JSON.parse(deploy).url : undefined,
+    next: "npm run deploy:railway (or deploy:cf for Cloudflare). No variables to set",
   });
 
   return out;

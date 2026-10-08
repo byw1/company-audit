@@ -46,14 +46,16 @@ is in `content/audit.config.ts` and whose rules are in `content/author.md`.
 npm run new -- --company "Acme" --domain acme.com --jd <URL>   # start an audit from a fresh template copy
 npm run status        # the checklist from setup to deploy, and the next step
 npm run jd -- <URL>   # is the role still on the careers index? (--save writes content/jd.md)
-npm run prep:init     # once: content/prep.ts from the example, PREP_KEY + PREP_SECRET in .env.local
+npm run prep:init     # once: content/prep.ts from the example, and PREP_KEY (the only key) in .env.local
 npm run validate      # schemas, labels, source ids, cross-references, dates, JD quotes
 npm run logos         # icons into public/logos, the accent, and the favicon/link-preview PNGs (commit the output)
-npm run dev           # http://localhost:3000 — seals prep first; ?prep=<PREP_KEY> unlocks the prep view
+npm run dev           # http://localhost:3000 — seals prep first and prints the ?prep=<PREP_KEY> link
 npm run prep:seal     # encrypt content/prep.ts → content/prep.sealed.json (prep:watch re-seals on save)
 npm run check         # validate + typecheck + lint
 npm run verify:share  # build, crawl the share view, prove nothing from the prep leaks
-npm run deploy:cf     # build, deploy to Cloudflare Workers, set the secrets (--github: CI secret too)
+npm run deploy:railway  # deploy to Railway: no variables; the first run signs in and makes the project
+npm run deploy:cf     # or Cloudflare Workers (after `npx wrangler login`); also no variables
+npm run deployed -- <url>  # record and check a deploy made from GitHub (Railway dashboard or connector)
 npm run author:save   # save your byline and author.md as the profile every new audit starts with
 npm run template:update  # pull the template's improvements into this audit
 ```
@@ -126,23 +128,29 @@ here. The ones that always apply:
 Prep must never reach anyone without the key, and audit repos can be public.
 Four layers enforce it, so one mistake can't leak:
 
-1. **Sealed in git.** `content/prep.ts` is gitignored. `npm run prep:seal`
-   encrypts it into `content/prep.sealed.json` with `PREP_SECRET` (32 random
-   bytes from `npm run prep:init`, kept in `.env.local` and the host's
-   secrets). The server decrypts it per request, only for the prep view.
-   Never commit `prep.ts`, never commit `.env.local`, and never put
-   `PREP_SECRET` anywhere public.
+1. **Sealed in git, keyed only by the author.** `content/prep.ts` is
+   gitignored. `npm run prep:seal` encrypts it into
+   `content/prep.sealed.json` with a key derived from `PREP_KEY` (random,
+   from `npm run prep:init`, kept in `.env.local`). The host holds no key and
+   no variables: `?prep=<PREP_KEY>` derives the decryption key, the gate
+   (`lib/prep/gate.ts`) checks it against the file, and an httpOnly cookie
+   carries it on each request. Never commit `prep.ts` or `.env.local`, never
+   put `PREP_KEY` anywhere public (a host variable, a CI secret, a commit
+   message, the site), and never give the server a key of its own.
 2. **ESLint** (`eslint.config.mjs`). Public code may not import
    `content/prep*`, `lib/prep/*`, `lib/schema/prep` or `components/prep/*`.
    The one sanctioned door is `<PrepLayer>` (`components/prep/PrepLayer.tsx`),
    a server component that renders nothing unless the server decided this
-   request is the prep view.
+   request is the prep view. `middleware.ts` may import the gate, and nothing
+   else.
 3. **`server-only`** in `lib/prep/content.ts`. The build fails if prep is
    ever pulled into a client bundle.
 4. **`npm run verify:share`** crawls the built site in the share view and
    checks the server HTML, RSC payloads, rendered DOM, search index and every
-   JS chunk. A control step proves the same probes appear in the prep view.
-   It also fails if `content/prep.ts` is tracked by git.
+   JS chunk, with the server started without any prep variables. A control
+   step proves the same probes appear in the prep view. It also fails if
+   `content/prep.ts` is tracked by git. Without the key or `prep.ts` (CI on
+   a real audit) it checks the gate only, and `status` doesn't count that.
 
 The view is decided in `middleware.ts` → `lib/view.ts`, never on the client.
 Never hide prep content with CSS, never pass it as a client prop outside

@@ -34,6 +34,19 @@ const PREP_MODULES = [
   "!@/components/prep/PrepLayer",
 ];
 
+const rule = (group) => [
+  "error",
+  {
+    patterns: [
+      {
+        group,
+        message:
+          "Prep content is private. Public code may only render <PrepLayer> from @/components/prep/PrepLayer; see CLAUDE.md → 'The prep boundary'.",
+      },
+    ],
+  },
+];
+
 const config = [
   {
     ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts", ".lighthouseci/**", ".verify/**", ".open-next/**", ".wrangler/**"],
@@ -41,18 +54,7 @@ const config = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: PREP_MODULES,
-              message:
-                "Prep content is private. Public code may only render <PrepLayer> from @/components/prep/PrepLayer; see CLAUDE.md → 'The prep boundary'.",
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": rule(PREP_MODULES),
       // Logos are local files with known sizes; next/image adds nothing here.
       "@next/next/no-img-element": "off",
     },
@@ -70,6 +72,13 @@ const config = [
       "tests/**",
     ],
     rules: { "no-restricted-imports": "off" },
+  },
+  {
+    // Middleware decides the view, so it may check a key, and nothing else:
+    // the gate holds no prep content and no secret.
+    files: ["middleware.ts"],
+    // (Patterns work like .gitignore: re-including a file needs its folder left out.)
+    rules: { "no-restricted-imports": rule([...PREP_MODULES.filter((p) => p !== "@/lib/prep"), "!@/lib/prep/gate"]) },
   },
 ];
 export default config;

@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parsePrep, prepWarnings } from "@/lib/schema/prep";
 import { AuditContentError, formatIssues, type Issue } from "@/lib/schema/validate";
-import { loadPrepPlain, loadPrepSealed, loadPublic, rawPublic } from "./lib/audit";
+import { loadPrepPlain, loadPrepSealed, loadPublic, rawPublic, readSealed } from "./lib/audit";
 
 async function main() {
   let warnings: Issue[] = [];
@@ -19,12 +19,13 @@ async function main() {
     const { company, role, workflows, record, competitors, ideas, sources } = rawPublic;
 
     // Prep: your plain content/prep.ts if it's here, else the sealed file (with
-    // PREP_SECRET), else the template's example.
+    // PREP_KEY), else, for the template itself, the example. CI has neither
+    // file nor key, and doesn't need them: prep:seal validates before sealing.
     const plain = await loadPrepPlain();
     const sealed = plain ? null : await loadPrepSealed().catch(() => {
-      throw new AuditContentError([{ level: "error", file: "content/prep.sealed.json", path: "", message: "Doesn't open with this PREP_SECRET" }]);
+      throw new AuditContentError([{ level: "error", file: "content/prep.sealed.json", path: "", message: "Doesn't open with this PREP_KEY" }]);
     });
-    const example = plain || sealed ? null : await loadPrepPlain({ allowExample: true });
+    const example = plain || sealed || !audit.config.company.fictional ? null : await loadPrepPlain({ allowExample: true });
     const prepRaw = plain?.raw ?? sealed ?? example?.raw;
     const prepFrom = plain ? "content/prep.ts" : sealed ? "content/prep.sealed.json" : example ? "content/prep.example.ts (no prep of your own here yet)" : null;
     if (prepRaw) {
@@ -43,7 +44,8 @@ async function main() {
         `${audit.sources.items.length} sources · ${audit.workflows.length} workflows · ` +
         `${audit.competitors.field.length} competitors · ${audit.ideas.items.length} ideas`,
     );
-    console.log(`  prep: ${prepFrom ?? "nothing to check (no content/prep.ts, and no PREP_SECRET to open the sealed file)"}`);
+    const unchecked = readSealed().v === 0 ? "none yet (no content/prep.ts)" : "sealed, not checked here (no content/prep.ts or PREP_KEY; prep:seal checks it before sealing)";
+    console.log(`  prep: ${prepFrom ?? unchecked}`);
   } catch (e) {
     if (e instanceof AuditContentError) {
       console.error(e.message);
