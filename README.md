@@ -12,7 +12,7 @@ claim says whether it's **sourced**, your **outside-in read**, or an
 Behind a key, the same site is your interview prep: a talk track for each page
 while you share your screen, likely questions, pushback, gaps, who's who, and
 questions to ask. Prep is committed only in encrypted form, so the whole repo
-can be public.
+can be public, and only you hold the key, so deploying takes no variables.
 
 You don't write it by hand. Install the skill, give Claude the company and
 the job link, and it researches, writes, fact-checks and deploys the site.
@@ -67,8 +67,8 @@ claude                                 # then: /new-audit, and follow `npm run s
 
 `npm run new` fetches the posting and saves it verbatim. For Ashby,
 Greenhouse and Lever it also checks the role is still on the careers index.
-Then it writes the config, loads your author profile, names the Cloudflare
-Worker, and creates your prep secrets.
+Then it writes the config, loads your author profile, names the site, and
+makes your prep key.
 
 `npm run status` then tracks the audit from setup to deploy, in 18 steps.
 It works progress out from the files, so you or Claude can stop and pick up
@@ -103,7 +103,7 @@ shape, and `npm run validate` says exactly what's wrong:
 
 ```bash
 npm run new -- --company … --domain … --jd …   # or edit content/audit.config.ts and run npm run prep:init
-npm run dev           # http://localhost:3000; ?prep=<PREP_KEY from .env.local> unlocks prep
+npm run dev           # http://localhost:3000; it prints the link that unlocks your prep
 npm run validate      # as you go
 npm run logos         # icons, accent, favicon and link-preview images
 npm run prep:seal     # encrypt your prep before committing
@@ -114,18 +114,26 @@ npm run verify:share  # must pass before you send the link
 
 - `content/prep.ts` holds your notes in plain text. It's **gitignored**: it
   never leaves your machine.
-- `npm run prep:seal` encrypts it with AES-256-GCM into
-  `content/prep.sealed.json`. That file is what's committed and deployed.
-  Without the secret it's noise.
-- `PREP_SECRET` (32 random bytes from `npm run prep:init`) decrypts it. It
-  lives in `.env.local` (gitignored) and in your host's secrets. Keep a copy
-  in your password manager.
-- `PREP_KEY` is what you type to see the prep: visit any page once with
-  `?prep=<PREP_KEY>`, and a cookie remembers you for 60 days.
+- `npm run prep:seal` encrypts it into `content/prep.sealed.json`, with
+  AES-256-GCM and a key derived from your `PREP_KEY`. That file is what's
+  committed and deployed. Without the key it's noise.
+- `PREP_KEY` is a random key that `npm run prep:init` puts in `.env.local`
+  (gitignored). It's the only key, and only you hold it: not the host, not
+  the repo, not CI. That's why there's nothing to set when you deploy. Keep a
+  copy in your password manager.
+- To see your prep, visit any page once with `?prep=<PREP_KEY>`. The server
+  derives the decryption key, checks it against the sealed file, and keeps it
+  in an httpOnly cookie for 60 days. `?prep=off` forgets it.
 
-The server decrypts prep only for a request it has already decided is the
-prep view. In the share view, prep isn't hidden with CSS: it's never rendered,
-so it isn't in the HTML, the RSC payload or any JavaScript.
+The server has no key of its own, so it can decrypt prep only for a request
+that brings one, and only once it has decided that request is the prep view.
+In the share view, prep isn't hidden with CSS: it's never rendered, so it
+isn't in the HTML, the RSC payload or any JavaScript.
+
+If the key ever leaks, delete `PREP_KEY` from `.env.local`, run
+`npm run prep:init` and `npm run prep:seal`, and redeploy. Versions already
+pushed stay readable with the old key, as with any encrypted file in a public
+repo.
 
 Four layers enforce this:
 
@@ -139,6 +147,35 @@ Four layers enforce this:
 
 ## Deploy
 
+There's nothing to configure: no variables, no secrets, no config file. The
+sealed prep ships with the site, and only the key you bring opens it.
+
+### Railway
+
+From GitHub, so every push redeploys:
+
+1. [New project](https://railway.com/new) → **Deploy from GitHub repo** →
+   your audit repo.
+2. The service → **Settings → Networking → Generate Domain**.
+3. `npm run deployed -- https://<your-domain>` records the URL for
+   `npm run status`. It also checks the live site: it answers, `/prep` is
+   404 without the key, and your key opens it.
+
+Or from the terminal, in one command:
+
+```bash
+npm run deploy:railway   # signs you in, creates the project, deploys, gives it a URL
+```
+
+The first run signs you in to Railway, or makes you an account. It creates a
+project named after the audit, deploys this folder and generates a domain,
+then checks the live site the same way. Later runs redeploy. It uploads what
+git would commit, so `content/prep.ts` and `.env.local` stay on your machine.
+
+With Claude's Railway connector, the skill does the GitHub route for you.
+Railway builds with `npm run build` and serves with `npm start`, which binds
+`$PORT`.
+
 ### Cloudflare Workers
 
 The site runs on Workers through [OpenNext](https://opennext.js.org/cloudflare).
@@ -146,16 +183,13 @@ No R2, KV or database is needed: pages render per request from `content/`, and
 the images are static files.
 
 ```bash
-npx wrangler login                 # once per machine (or set CLOUDFLARE_API_TOKEN)
-npm run deploy:cf -- --github      # → https://acme-audit.<your-subdomain>.workers.dev
+npx wrangler login     # once per machine (or set CLOUDFLARE_API_TOKEN)
+npm run deploy:cf      # → https://acme-audit.<your-subdomain>.workers.dev
 ```
 
-`deploy:cf` refuses to ship stale sealed prep. Otherwise it:
-- builds and deploys the Worker (`npm run new` already named it `<company>-audit`);
-- sets `PREP_KEY` and `PREP_SECRET` from `.env.local` as the Worker's
-  secrets;
-- with `--github`, stores `PREP_SECRET` as a GitHub Actions secret, so CI
-  checks your real prep.
+`deploy:cf` refuses to ship stale sealed prep. It builds and deploys the
+Worker (`npm run new` already named it `<company>-audit`), then checks the
+live site.
 
 Also:
 - `npm run cf:preview` runs the same build locally in Cloudflare's runtime.
@@ -167,19 +201,11 @@ Also:
 - **Plan:** the free plan allows 10 ms of CPU per request. If pages fail with
   error 1102, move to Workers Paid.
 
-### Railway
-
-1. **New project → Deploy from GitHub repo**, and pick your audit repo.
-2. **Variables:** add `PREP_KEY` and `PREP_SECRET` from `.env.local`.
-3. **Settings → Networking → Generate domain.**
-
-The defaults work: `npm run build`, then `npm run start`, which binds `$PORT`.
-
 ### Send it
 
-Open `https://<your-site>/?prep=<PREP_KEY>` once. Use the **Prep / Share**
-toggle in the header to preview exactly what a recipient sees, then send the
-plain URL.
+Open `https://<your-site>/?prep=<PREP_KEY>` once; the deploy commands print
+that link. Use the **Prep / Share** toggle in the header to preview exactly
+what a recipient sees, then send the plain URL.
 
 ## What's on the site
 
@@ -243,8 +269,10 @@ npm run verify:share  # the share view leaks nothing
 npm run lighthouse    # Lighthouse CI against a local production server
 ```
 
-`verify:share` builds the site, starts it with a throwaway key, and derives
-probes from every string in your prep. Then it:
+`verify:share` builds the site and starts it with no prep variables, as a
+host would. It opens your sealed prep with your key (or seals your
+`content/prep.ts` with a throwaway one) and derives probes from every string
+in it. Then it:
 
 - crawls every route in the share view and checks:
   - the raw server HTML, after stripping React's `<!-- -->` separators and
@@ -254,8 +282,8 @@ probes from every string in your prep. Then it:
   - the search index;
   - every JS and CSS chunk the build ships;
 - repeats the checks in the share preview;
-- asserts that `/prep` is 404 without the key, with a forged cookie and under
-  `?share`;
+- asserts that `/prep` is 404 without the key, with forged cookies (the raw
+  key among them) and under `?share`;
 - runs a **control**: the same probes must appear in the prep view, so a pass
   can't come from probes that match nothing;
 - fails if `content/prep.ts` is tracked by git, and warns if it's in the
@@ -269,8 +297,10 @@ probes from every string in your prep. Then it:
 - Lighthouse on `/`: the median of five mobile runs must score 95+ for
   performance and accessibility.
 
-Add `PREP_SECRET` as a GitHub Actions secret and `verify:share` checks your
-real prep. Without it, it checks the boundary with the example prep.
+CI needs no secrets. In the template, `verify:share` checks the example prep
+word for word. In an audit repo your prep stays sealed in CI, so it checks the
+gate: `/prep` is 404 and forged cookies open nothing. The word-for-word check
+runs on your machine, and `npm run status` doesn't tick it off until it has.
 
 ## Logos, favicon, accent
 
@@ -326,6 +356,10 @@ It adds the template as a remote, merges its latest `main`, and keeps
 everything that's yours: `content/`, `public/logos/`, the generated images and
 `wrangler.jsonc`. It commits only if `npm run check` passes afterwards. If the
 content schema changed, `npm run validate` says exactly what to update.
+
+Audits from before keyless deploys sealed prep with `PREP_SECRET`, which the
+host had to hold. The update re-seals it with your `PREP_KEY`; after you
+redeploy, delete both variables from the host.
 
 ## Notes
 

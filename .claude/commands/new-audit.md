@@ -28,8 +28,8 @@ the files, so you can stop and resume at any point.
   `npm run new -- --company "<Company>" --domain <domain> --jd <JD URL>`.
   It fetches the posting, checks the careers index, saves `content/jd.md` and
   the `jd` source, writes the config, loads my author profile, names the
-  Worker and creates the prep secrets. If it says the role isn't on the
-  careers index, stop and tell me.
+  site and makes my prep key. If it says the role isn't on the careers
+  index, stop and tell me.
 - Read `content/author.md`. If it still has the template's placeholder
   comments, ask me for my rules and where my evidence lives, and fill it in.
   Set `author` (name, email, LinkedIn) in `content/audit.config.ts` too, then
@@ -206,5 +206,7 @@ Then report back with:
    original wording, what changed, and why.
 3. Open gaps: things you couldn't source, evidence of mine you couldn't find,
    and validation warnings left.
-4. Next: `npm run deploy:cf -- --github` (after `npx wrangler login`). It
-   deploys to Cloudflare and sets the secrets. Railway is in README → Deploy.
+4. Next: deploy. There's nothing to configure on any host. With the Railway
+   connector: `create-project`, `create-deployment` from the repo,
+   `generate-domain`, then `npm run deployed -- <url>`. From a terminal:
+   `npm run deploy:railway`. Cloudflare: `npm run deploy:cf`.

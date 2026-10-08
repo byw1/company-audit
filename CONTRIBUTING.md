@@ -8,7 +8,7 @@ and any author.
 
 ```bash
 npm ci
-npm run dev          # http://localhost:3000; ?prep=dev shows the example's prep view
+npm run dev          # http://localhost:3000; ?prep=demo shows the example's prep view
 ```
 
 No secrets are needed to work on the template. It runs the fictional

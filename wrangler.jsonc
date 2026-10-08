@@ -14,9 +14,6 @@
     { "binding": "WORKER_SELF_REFERENCE", "service": "company-audit" }
   ],
   "observability": { "enabled": true }
-  // Secrets, set once per Worker (never in this file):
-  //   npx wrangler secret put PREP_KEY
-  //   npx wrangler secret put PREP_SECRET
-  // Optional variable for absolute link-preview URLs on a custom domain:
-  //   "vars": { "NEXT_PUBLIC_SITE_URL": "https://audit.example.com" }
+  // No secrets or variables: the sealed prep ships in the build, and only the
+  // key you bring (?prep=<PREP_KEY>) opens it.
 }

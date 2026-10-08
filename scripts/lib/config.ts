@@ -72,7 +72,7 @@ export function writeConfig(c: NewConfig) {
   writeFileSync(CONFIG, lines.join("\n"));
 }
 
-/** Point wrangler.jsonc (name and the self-reference service) at this audit's Worker. */
+/** Name this audit's site: wrangler.jsonc's Worker (and its self-reference), which deploy:railway uses as the project name too. */
 export function setWorkerName(name: string) {
   const file = path.join(process.cwd(), "wrangler.jsonc");
   const src = readFileSync(file, "utf8");

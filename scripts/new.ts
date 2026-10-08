@@ -9,8 +9,8 @@
  *   3. adds the posting to content/sources.ts as source "jd";
  *   4. loads your author profile (npm run author:save, once) into
  *      content/author.md and the byline;
- *   5. names the Cloudflare Worker <slug>-audit;
- *   6. creates content/prep.ts and the secrets in .env.local (prep:init).
+ *   5. names the site <slug>-audit (the Railway project, the Cloudflare Worker);
+ *   6. creates content/prep.ts and your prep key in .env.local (prep:init).
  * The rest of content/ is still the fictional example until the research
  * replaces it; `npm run status` tracks what's left.
  */
@@ -102,11 +102,11 @@ async function main() {
     console.log(`  ✓ content/author.md and the byline from your profile (${profile.author.name})`);
   } else console.warn("  ! No author profile yet: fill in content/author.md and audit.config.ts → author, then `npm run author:save` so the next audit starts with them");
 
-  // 5. The Worker's name.
+  // 5. The site's name: the Railway project, the Cloudflare Worker.
   setWorkerName(`${slug}-audit`);
-  console.log(`  ✓ wrangler.jsonc: Worker "${slug}-audit"`);
+  console.log(`  ✓ named the site "${slug}-audit" (wrangler.jsonc)`);
 
-  // 6. Private prep and secrets.
+  // 6. Private prep, and the only key to it.
   execFileSync("npm", ["run", "-s", "prep:init"], { cwd: ROOT, stdio: "inherit" });
 
   console.log(`\n  Started: ${company}, ${role}. The rest of content/ is still the fictional example.`);

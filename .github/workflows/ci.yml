@@ -40,12 +40,11 @@ jobs:
       - run: npm ci
       - name: Install Chromium for the rendered-DOM check
         run: npx playwright-core install --with-deps chromium
+      # No secrets needed. The template's example is checked word by word; a
+      # real audit's prep stays sealed here, so CI checks the gate and the full
+      # check runs on your machine (npm run status asks for it).
       - name: Crawl the share view for anything from the prep
         run: npm run verify:share
-        env:
-          # Add PREP_SECRET as a repository secret so this checks your real,
-          # sealed prep. Without it, the check seals the example prep for the run.
-          PREP_SECRET: ${{ secrets.PREP_SECRET }}
 
   cloudflare:
     name: Cloudflare Workers build (OpenNext)

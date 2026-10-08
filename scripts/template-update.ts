@@ -2,11 +2,15 @@
  * npm run template:update — pull the template's latest improvements into this
  * audit, keeping everything that's yours: content/, public/logos/ and the
  * generated images. Commits the merge only if `npm run check` passes after it;
- * otherwise it leaves the merge staged and says what failed.
+ * otherwise it leaves the merge staged and says what failed. Prep sealed in
+ * an older format, which needed a secret on the host, is re-sealed in the
+ * current one, which needs none.
  *
  * TEMPLATE_REPO overrides the source (default byw1/company-audit).
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 const ROOT = process.cwd();
 const REPO = process.env.TEMPLATE_REPO ?? "https://github.com/byw1/company-audit.git";
@@ -49,6 +53,10 @@ function main() {
     console.log("\n  ! The merge is staged but `npm run check` failed: the template may have changed the content schema. `npm run validate` says what to update; commit when it passes.");
     process.exit(1);
   }
+  // Prep sealed by an older template needed a secret on the host; the new format needs none. Move it over.
+  const sealedFile = path.join(ROOT, "content", "prep.sealed.json");
+  if (existsSync(sealedFile) && JSON.parse(readFileSync(sealedFile, "utf8")).v === 1 && !npm(["run", "-s", "prep:seal"]))
+    console.log("\n  ! Your sealed prep is in the old format, and moving it needs content/prep.ts (or PREP_SECRET) and PREP_KEY in .env.local. Run `npm run prep:seal` where you have them, before you next deploy.");
   git(["add", "-A"]);
   git(["commit", "-q", "-m", "Pull template improvements"]);
   console.log("  ✓ merged and committed. Run `npm run verify:share` before you next deploy.");

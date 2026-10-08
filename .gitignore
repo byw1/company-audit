@@ -8,7 +8,7 @@ build
 next-env.d.ts
 *.tsbuildinfo
 
-# env — PREP_KEY and PREP_SECRET live in .env.local and the host's variables, never in git
+# env — PREP_KEY lives in .env.local (and your password manager), never in git or on the host
 .env*
 !.env.example
 

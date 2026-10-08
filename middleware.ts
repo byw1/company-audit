@@ -1,33 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import auditConfig from "@/content/audit.config";
+import { COOKIE, holds, unlock } from "@/lib/prep/gate";
 
 /**
  * Two views. The public one is the default, so a forwarded link can never
- * expose prep notes. The prep view needs PREP_KEY: visit any page with
- * ?prep=<key> once and a cookie remembers it; ?prep=off forgets it. Inside the
- * prep view, ?share previews exactly what a recipient sees.
+ * expose prep notes. The prep view needs PREP_KEY, which only the author
+ * holds: visit any page with ?prep=<key> once and a cookie remembers it;
+ * ?prep=off forgets it. Inside the prep view, ?share previews exactly what a
+ * recipient sees. The server keeps no key of its own (lib/prep/gate.ts), so
+ * deploying needs no variables.
  *
  * The decision is made here, on the server, and passed down as a request
  * header, so prep-only content is never rendered or serialized for anyone
  * else — not hidden with CSS, not present in the page payload at all.
  */
-const COOKIE = "audit_prep";
 const SIXTY_DAYS = 60 * 60 * 24 * 60;
 
-function prepKey() {
-  if (process.env.PREP_KEY) return process.env.PREP_KEY;
-  // Local development only: no key configured means ?prep=dev works.
-  return process.env.NODE_ENV === "development" ? "dev" : null;
-}
-
-/** The cookie holds a digest of the key, never the key itself. */
-async function digest(key: string) {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`audit-prep:${key}`));
-  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export async function middleware(req: NextRequest) {
-  const key = prepKey();
   const url = req.nextUrl;
   const asked = url.searchParams.get("prep");
 
@@ -35,8 +24,10 @@ export async function middleware(req: NextRequest) {
     const clean = url.clone();
     clean.searchParams.delete("prep");
     const res = NextResponse.redirect(clean);
-    if (key && asked === key) {
-      res.cookies.set(COOKIE, await digest(key), {
+    // The cookie holds the key derived from PREP_KEY, never PREP_KEY itself.
+    const key = asked === "off" ? null : await unlock(asked);
+    if (key) {
+      res.cookies.set(COOKIE, key, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -49,8 +40,7 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  const cookie = req.cookies.get(COOKIE)?.value;
-  const prepAllowed = !!key && !!cookie && cookie === (await digest(key));
+  const prepAllowed = await holds(req.cookies.get(COOKIE)?.value);
   const view = prepAllowed && !url.searchParams.has("share") ? "prep" : "share";
 
   // A chapter switched off in audit.config.ts doesn't exist.
