@@ -1,6 +1,10 @@
 /**
  * npm run prep:init   — start your private prep: copy the example to content/prep.ts
  *                       (gitignored) and put a PREP_KEY in .env.local.
+ *                       --key <PREP_KEY> brings an audit's key back to a fresh
+ *                       checkout (a new cloud session, another machine): it saves
+ *                       the key and restores content/prep.ts from the sealed file.
+ *                       Once prep is sealed, init never makes a new key.
  * npm run prep:seal   — validate content/prep.ts and encrypt it with PREP_KEY into
  *                       content/prep.sealed.json, the only form that's committed.
  *                       --watch re-seals on every save; --if-present does nothing
@@ -17,6 +21,7 @@
  */
 import { copyFileSync, existsSync, watch, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { isSealed, isSealedV1, newKey, seal, unseal, unsealV1, weakKey } from "@/lib/prep/seal";
 import { parsePrep } from "@/lib/schema/prep";
 import { AuditContentError } from "@/lib/schema/validate";
@@ -26,15 +31,28 @@ import { envVar, readEnvLocal, ROOT, setEnvLocal } from "./lib/env";
 const rel = (p: string) => path.relative(ROOT, p);
 const [cmd = "seal", ...flags] = process.argv.slice(2);
 const has = (f: string) => flags.includes(f);
+const flag = (f: string) => (flags.includes(f) ? flags[flags.indexOf(f) + 1] : undefined);
 
 async function init() {
+  const sealed = readSealed();
+  const given = flag("--key")?.trim();
+  if (has("--key") && !given) throw new Error("Usage: npm run prep:init -- --key <PREP_KEY>");
+  // Prep is already sealed: this checkout needs that key back, never a new one.
+  if (isSealed(sealed)) return restore(given ?? readEnvLocal().PREP_KEY);
+
+  if (given) {
+    const weak = weakKey(given);
+    if (weak && !loadPublic().audit.config.company.fictional) throw new Error(`That key is too weak: ${weak}.`);
+    setEnvLocal("PREP_KEY", given);
+  }
   if (existsSync(PREP_PLAIN)) console.log(`  · ${rel(PREP_PLAIN)} already exists; left as is`);
   else {
     copyFileSync(PREP_EXAMPLE, PREP_PLAIN);
     console.log(`  ✓ ${rel(PREP_PLAIN)} created from the example (gitignored: it never leaves this machine)`);
   }
   const env = readEnvLocal();
-  if (!env.PREP_KEY) {
+  if (given) console.log("  ✓ PREP_KEY saved in .env.local");
+  else if (!env.PREP_KEY) {
     setEnvLocal("PREP_KEY", newKey());
     console.log("  ✓ PREP_KEY generated in .env.local");
   } else if (weakKey(env.PREP_KEY)) {
@@ -44,6 +62,49 @@ async function init() {
   console.log("    your password manager. Without it, nobody can open the sealed prep, you included.");
   console.log("\n  Next: write your prep in content/prep.ts, then `npm run prep:seal`.");
   console.log("  Deploying needs no variables: you bring the key, as ?prep=<PREP_KEY>.");
+}
+
+/** Bring a sealed audit's key back: save it, and rebuild content/prep.ts from the sealed file. */
+async function restore(key: string | undefined) {
+  const sealed = readSealed();
+  if (!isSealed(sealed)) return;
+  if (!key)
+    throw new Error(
+      "This audit's prep is already sealed, so it needs its key, not a new one (a new key would lock it away for good). Ask for the PREP_KEY, then run `npm run prep:init -- --key <PREP_KEY>`.",
+    );
+  let json: string;
+  try {
+    json = await unseal(sealed, key);
+  } catch {
+    throw new Error("That key doesn't open content/prep.sealed.json. Check it against the one in your password manager.");
+  }
+  if (readEnvLocal().PREP_KEY !== key) {
+    setEnvLocal("PREP_KEY", key);
+    console.log("  ✓ PREP_KEY saved in .env.local");
+  } else console.log("  · PREP_KEY already set in .env.local");
+  if (existsSync(PREP_PLAIN)) return console.log(`  · ${rel(PREP_PLAIN)} already exists; left as is`);
+  writeFileSync(PREP_PLAIN, restoredSource(JSON.parse(json)));
+  console.log(`  ✓ ${rel(PREP_PLAIN)} restored from the sealed file (gitignored: edit it, then \`npm run prep:seal\`)`);
+}
+
+function restoredSource(prep: unknown) {
+  return `import "server-only";
+import type { PrepInput } from "@/lib/schema/prep";
+
+/**
+ * Your prep, restored from content/prep.sealed.json by \`npm run prep:init -- --key\`.
+ * Gitignored: it never leaves this machine. Edit it, then \`npm run prep:seal\`.
+ * Anything about you follows the guardrails in content/author.md.
+ */
+export default ${JSON.stringify(prep, null, 2)} satisfies PrepInput;
+`;
+}
+
+/** True when content/prep.ts is still the template's example, untouched. */
+async function isUntouchedExample(raw: unknown) {
+  if (!existsSync(PREP_EXAMPLE)) return false;
+  const example = (await import(pathToFileURL(PREP_EXAMPLE).href)).default;
+  return JSON.stringify(raw) === JSON.stringify(example);
 }
 
 /** Validate prep and return its canonical JSON. */
@@ -68,6 +129,14 @@ function prepKey(): string | undefined {
 async function sealOnce({ quiet = false } = {}) {
   const key = prepKey();
   const current = readSealed();
+  // A real audit never seals the template's example: there's nothing of yours in it, and it
+  // would replace prep already sealed by an earlier session.
+  const plain = await loadPrepPlain();
+  if (plain && !loadPublic().audit.config.company.fictional && (await isUntouchedExample(plain.raw))) {
+    if (!quiet && !has("--if-present"))
+      console.log(`  · ${rel(PREP_PLAIN)} is still the template's example, so there's nothing to seal yet. Write your prep first${isSealed(current) ? ", or restore it with `npm run prep:init -- --key <PREP_KEY>`" : ""}.`);
+    return;
+  }
   let json = await plainJson();
   let from = rel(PREP_PLAIN);
   // An older template's file and no content/prep.ts here: open it with its PREP_SECRET and move it over.

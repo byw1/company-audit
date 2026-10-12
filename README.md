@@ -5,25 +5,18 @@
 company-audit builds a small website about one company, read through the one
 role you're interviewing for. It shows how the business is set up, how the
 work in the role flows, what the company has said publicly, who it competes
-with, and what you'd do first. It reads like an operator wrote it, and every
-claim says whether it's **sourced**, your **outside-in read**, or an
-**illustrative model**.
+with, and what you'd do first. Every claim says whether it's **sourced**, your
+**outside-in read**, or an **illustrative model**.
 
 Behind a key, the same site is your interview prep: a talk track for each page
 while you share your screen, likely questions, pushback, gaps, who's who, and
-questions to ask. Prep is committed only in encrypted form, so the whole repo
-can be public, and only you hold the key, so deploying takes no variables.
-
-You don't write it by hand. Install the skill, give Claude the company and
-the job link, and it researches, writes, fact-checks and deploys the site.
-
-The template ships with **Northwind Commerce, a fictional company**, as the
-example.
+questions to ask. Prep is committed only in encrypted form, so the repo can be
+public. Only you hold the key, so deploying takes no variables.
 
 **Live demo:** [the public site](https://site-production-7a10.up.railway.app),
 and [the same site in the prep view](https://site-production-7a10.up.railway.app/?prep=demo).
-The demo's key is `demo` because the company is invented. Yours will be a long
-random key.
+The demo's key is `demo` because the company, Northwind Commerce, is invented.
+Yours will be a long random key.
 
 | | |
 | --- | --- |
@@ -34,81 +27,61 @@ random key.
 
 ## Make one
 
-### With the Claude skill (easiest)
+1. **Use this template** (the green button at the top of this page) →
+   **Create a new repository**, named for the company: `acme-audit`.
+2. Open [Claude Code](https://claude.ai/code), select the new repo, and paste
+   this, filled in:
 
-1. Download `company-audit-skill.zip` from the
-   [latest release](https://github.com/byw1/company-audit/releases) (or the
-   `skills/company-audit` folder).
-   - **Claude Code**: unzip it into `~/.claude/skills/`.
-   - **claude.ai**: Settings → Capabilities → Skills → upload the zip.
-2. Ask Claude:
+   ```text
+   Build my audit site in this repo, start to finish.
 
-   > /company-audit Acme acme.com https://jobs.acme.com/head-of-ops
+   Company: Acme (acme.com)
+   Job: https://jobs.ashbyhq.com/acme/1234
+   Context: second round with the COO next week; they care about margins
 
-   It asks for your name, email, LinkedIn and where your experience lives
-   (a resume file, your LinkedIn export, notes), then:
-   - creates `<you>/acme-audit` from this template;
-   - researches the company and the role;
-   - writes your sealed prep;
-   - runs a separate fact-check pass that rates every claim BLOCKER / FIX / NOTE;
-   - proves nothing private leaks, and deploys.
+   About me: Jane Doe · jane@example.com · https://www.linkedin.com/in/janedoe
+   My rules: never call me an engineer; no phone number
+   My record: my resume is pasted below (or: it's in my Hired workspace)
 
-The skill does the most from Claude Code, which can run the commands.
+   When it's done, open a pull request, merge it to main, deploy it on
+   Railway, and give me the site link, my prep link and my prep key.
+   ```
 
-### From the template, in Claude Code
+3. **Save the prep key** it gives you in your password manager. Nothing else
+   holds it.
 
-```bash
-gh repo create <you>/acme-audit --template byw1/company-audit --public --clone
-cd acme-audit && npm install
-npm run new -- --company "Acme" --domain acme.com --jd https://jobs.ashbyhq.com/acme/…
-npm run status                         # the checklist, and what to do next
-claude                                 # then: /new-audit, and follow `npm run status`
-```
+Claude researches the company and writes every page, with each claim
+labelled. It writes your prep and seals it, and a separate fact-check pass
+reviews every claim. Then it proves nothing private leaks and deploys the
+site. You don't configure anything.
 
-`npm run new` fetches the posting and saves it verbatim. For Ashby,
-Greenhouse and Lever it also checks the role is still on the careers index.
-Then it writes the config, loads your author profile, names the site, and
-makes your prep key.
+Only `Company` and `Job` are needed; leave out what you don't have. Context,
+rules and your record make it better. With no record, the prep lists what it
+couldn't back up as gaps rather than inventing anything.
 
-`npm run status` then tracks the audit from setup to deploy, in 18 steps.
-It works progress out from the files, so you or Claude can stop and pick up
-any time:
+**The first time,** check three things:
+- Claude's GitHub app can see the new repo. It can if you installed it for all
+  your repositories.
+- Your Claude Code environment's network access reaches the open web, for the
+  research.
+- The Railway connector is connected in Claude, so it can deploy for you.
+  Without it, Claude gives you the [three clicks](#railway) instead.
 
-```
-  Mercor · Head of Operations Planning
+**Later** (a second round, fresh news): open the repo in Claude Code again
+and say what to change. If it touches your prep, include your prep key.
 
-  ✓  1. Started for a real company and role
-  ✓  2. Your byline and rules (content/author.md)
-  …
-  ·  5. Research: company.ts  (still has the example)
-  …
-  5/18 done.
-  Next: Replace the fictional example in content/company.ts (/new-audit, step 2)
-```
+### Other ways to run it
 
-`/new-audit` is the full research playbook (`.claude/commands/new-audit.md`).
-`CLAUDE.md` holds the rules it follows.
-
-### Your profile, once
-
-Your byline (name, email, LinkedIn) and your rules (`content/author.md`: what
-must or mustn't be said about you, and where your evidence lives) are the same
-for every audit. Fill them in once and run `npm run author:save`. They go to
-`~/.config/company-audit/`, and every `npm run new` starts with them.
-
-### By hand
-
-Everything company-specific is in `content/`. Each file's example shows the
-shape, and `npm run validate` says exactly what's wrong:
-
-```bash
-npm run new -- --company … --domain … --jd …   # or edit content/audit.config.ts and run npm run prep:init
-npm run dev           # http://localhost:3000; it prints the link that unlocks your prep
-npm run validate      # as you go
-npm run logos         # icons, accent, favicon and link-preview images
-npm run prep:seal     # encrypt your prep before committing
-npm run verify:share  # must pass before you send the link
-```
+- **Claude Code on your own machine:** clone the new repo, run `npm install`
+  and `claude`, and paste the same prompt. `npm run author:save` keeps your
+  byline and rules for every audit after.
+- **claude.ai, with the skill:** download `company-audit-skill.zip` from the
+  [latest release](https://github.com/byw1/company-audit/releases), upload it
+  under Settings → Capabilities → Skills, then ask
+  `/company-audit Acme acme.com <job link>`.
+- **By hand:** everything company-specific is in `content/`, and
+  `npm run status` says what to do next. `CLAUDE.md` holds the rules;
+  `.claude/commands/new-audit.md` is the research playbook.
 
 ## How prep stays private in a public repo
 

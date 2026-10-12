@@ -52,12 +52,14 @@ async function steps(): Promise<Step[]> {
   });
 
   const env = readEnvLocal();
+  // A fresh checkout of an audit whose prep is already sealed needs that key back, not a new one.
+  const sealedAlready = isSealed(readSealed());
   add({
     id: "key",
     label: "Prep key in .env.local (PREP_KEY, yours alone)",
     done: !!env.PREP_KEY && !weakKey(env.PREP_KEY) && existsSync(path.join(ROOT, "content", "prep.ts")),
-    detail: env.PREP_KEY && weakKey(env.PREP_KEY) ? `too weak: ${weakKey(env.PREP_KEY)}` : undefined,
-    next: "npm run prep:init",
+    detail: env.PREP_KEY && weakKey(env.PREP_KEY) ? `too weak: ${weakKey(env.PREP_KEY)}` : sealedAlready && !env.PREP_KEY ? "prep is sealed; this checkout needs its key" : undefined,
+    next: sealedAlready ? "Ask the author for this audit's PREP_KEY, then `npm run prep:init -- --key <PREP_KEY>` (restores content/prep.ts)" : "npm run prep:init",
   });
 
   const jd = read("content/jd.md") ?? "";

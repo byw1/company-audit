@@ -6,9 +6,10 @@ argument-hint: <Company> <domain> <JD URL>
 # New audit: $ARGUMENTS
 
 You're building an outside-in audit of one company, read through one role, in
-this repo (created from the company-audit template). Arguments: company name,
-company domain, and the URL of the job description. If any is missing, ask
-for it before starting.
+this repo (created from the company-audit template). You need the company
+name, its domain and the URL of the job description, from the arguments or
+the message. Find whichever is missing yourself (the company's site, its
+careers page); ask only if you can't.
 
 Read `CLAUDE.md` first. Its content rules are hard rules. Everything you write
 goes in `content/`; don't touch `app/`, `components/` or `lib/`.
@@ -31,9 +32,11 @@ the files, so you can stop and resume at any point.
   site and makes my prep key. If it says the role isn't on the careers
   index, stop and tell me.
 - Read `content/author.md`. If it still has the template's placeholder
-  comments, ask me for my rules and where my evidence lives, and fill it in.
-  Set `author` (name, email, LinkedIn) in `content/audit.config.ts` too, then
-  `npm run author:save` so the next audit starts with them.
+  comments, fill it in from what my message says about me: my rules, and
+  where my evidence lives. Set `author` (name, email, LinkedIn) in
+  `content/audit.config.ts` too. Ask only for what the message doesn't say.
+  On my own machine, `npm run author:save` keeps them for the next audit; a
+  cloud session can't, so the message carries them each time.
 - In `content/audit.config.ts`:
   - check what `new` filled in (team, location), and set `researched` to this
     month if the research runs over;
@@ -195,8 +198,10 @@ npm run prep:seal      # encrypt content/prep.ts; commit content/prep.sealed.jso
 npm run check
 npm run verify:share   # must pass
 npm run status         # everything above "Deployed" is ✓
-npm run dev            # read every page once, in the share view
 ```
+
+On my machine, `npm run dev` and read every page once in the share view. In a
+cloud session, the verify:share crawl stands in, and I'll read the live site.
 
 Then report back with:
 
@@ -206,7 +211,11 @@ Then report back with:
    original wording, what changed, and why.
 3. Open gaps: things you couldn't source, evidence of mine you couldn't find,
    and validation warnings left.
-4. Next: deploy. There's nothing to configure on any host. With the Railway
-   connector: `create-project`, `create-deployment` from the repo,
-   `generate-domain`, then `npm run deployed -- <url>`. From a terminal:
-   `npm run deploy:railway`. Cloudflare: `npm run deploy:cf`.
+4. The deploy, if my message asked for it (CLAUDE.md → Start here), and the
+   live URL. Otherwise, next: deploy. There's nothing to configure on any
+   host. With the Railway connector: `create-project`, `create-deployment`
+   from the repo, `generate-domain`, then `npm run deployed -- <url>`. From a
+   terminal: `npm run deploy:railway`. Cloudflare: `npm run deploy:cf`.
+5. **My prep key** (`PREP_KEY` from `.env.local`) and my unlock link,
+   `<url>/?prep=<PREP_KEY>`. Tell me to save the key in my password manager:
+   a cloud session's container is temporary, and nothing else holds it.
