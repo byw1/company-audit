@@ -18,6 +18,45 @@ The site is about **the company**, not about the author. `/fit` is optional
 and off by default. "I" and "me" below mean the author: the person whose name
 is in `content/audit.config.ts` and whose rules are in `content/author.md`.
 
+## Start here
+
+**A fresh copy of this template, and a message naming a company or a job**
+(`content/audit.config.ts` still says `fictional: true`): build the whole
+audit in one go, without stopping to check in between steps. The README's
+prompt is the usual message. Ask once, up front, only for what you can't find
+yourself; usually that's who the author is, if neither the message nor
+`content/author.md` says. One exception: if this repo is the template itself
+(`git remote get-url origin` ends in `byw1/company-audit` or
+`byw1/company-audit.git`), build nothing here.
+Ask for a copy made with **Use this template**, opened in its own session.
+
+1. **Take from the message** the company, its domain and the posting URL
+   (find whichever is missing), and the author: name, email, LinkedIn, their
+   rules, and where their evidence lives. The author goes in
+   `content/audit.config.ts` → `author` and in `content/author.md`.
+2. **Build:** follow `.claude/commands/new-audit.md` from step 0 through the
+   fact-check, with `npm run status` as the checklist. As soon as
+   `npm run new` makes the prep key, tell the author what it is, so it
+   survives a session that ends early. Then run `npm run logos`,
+   `npm run check` and `npm run verify:share`, and commit and push.
+3. **Ship, when the message asks:** open a pull request and merge it into
+   `main`. Deploy `main` with the Railway connector: `create-project`,
+   `create-deployment` from this repo, `generate-domain`, and no variables.
+   Then run `npm run deployed -- <url>`, and get that commit onto `main` the
+   same way. With no connector, or if Railway can't see the repo, give the
+   author the three dashboard steps from the README.
+4. **Report:** the playbook's summary and fact-check table, the live URL, and
+   **the prep key**. This session's container is temporary: `.env.local` (the
+   key) and `content/prep.ts` go with it. Give the author `PREP_KEY` and their
+   unlock link (`<url>/?prep=<PREP_KEY>`), and tell them to save the key in
+   their password manager. Nothing else holds it.
+
+**A later session on an audit that's already built:** the prep is sealed and
+its key isn't here. If the work touches prep, ask the author for the key, then
+run `npm run prep:init -- --key <PREP_KEY>`. That saves the key and restores
+`content/prep.ts`. Without a key, `prep:init` refuses, because a new key would
+lock the sealed prep away for good.
+
 ## Where things live
 
 | Path | What |
@@ -47,6 +86,7 @@ npm run new -- --company "Acme" --domain acme.com --jd <URL>   # start an audit 
 npm run status        # the checklist from setup to deploy, and the next step
 npm run jd -- <URL>   # is the role still on the careers index? (--save writes content/jd.md)
 npm run prep:init     # once: content/prep.ts from the example, and PREP_KEY (the only key) in .env.local
+npm run prep:init -- --key <PREP_KEY>  # a new session on a built audit: bring the key back, restore content/prep.ts
 npm run validate      # schemas, labels, source ids, cross-references, dates, JD quotes
 npm run logos         # icons into public/logos, the accent, and the favicon/link-preview PNGs (commit the output)
 npm run dev           # http://localhost:3000 — seals prep first and prints the ?prep=<PREP_KEY> link
