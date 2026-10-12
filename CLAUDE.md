@@ -20,41 +20,49 @@ is in `content/audit.config.ts` and whose rules are in `content/author.md`.
 
 ## Start here
 
-**A fresh copy of this template, and a message naming a company or a job**
-(`content/audit.config.ts` still says `fictional: true`): build the whole
-audit in one go, without stopping to check in between steps. The README's
-prompt is the usual message. Ask once, up front, only for what you can't find
-yourself; usually that's who the author is, if neither the message nor
-`content/author.md` says. One exception: if this repo is the template itself
-(`git remote get-url origin` ends in `byw1/company-audit` or
-`byw1/company-audit.git`), build nothing here.
-Ask for a copy made with **Use this template**, opened in its own session.
+**A fresh copy of this template** (`content/audit.config.ts` still says
+`fictional: true`) **and a message with a job link** means: build the whole
+audit in one go, without stopping to check in. The usual message is one line,
+`Build and ship: <job link>`. One exception: if this repo is the template
+itself (`git remote get-url origin` ends in `byw1/company-audit` or
+`byw1/company-audit.git`), build nothing, and ask for a copy made with **Use
+this template**, opened in its own session.
 
-1. **Take from the message** the company, its domain and the posting URL
-   (find whichever is missing), and the author: name, email, LinkedIn, their
-   rules, and where their evidence lives. The author goes in
-   `content/audit.config.ts` → `author` and in `content/author.md`.
-2. **Build:** follow `.claude/commands/new-audit.md` from step 0 through the
-   fact-check, with `npm run status` as the checklist. As soon as
-   `npm run new` makes the prep key, tell the author what it is, so it
+1. **Inputs.** The company, its domain and the role come from the job link;
+   find whatever it doesn't say. The author comes from the first of these
+   that has them:
+   - the message;
+   - `content/author.md` and `author` in `content/audit.config.ts`, if this
+     copy already has them;
+   - a career workspace connected to you. For Hired: `get_me_snapshot` with
+     `only: "profile"` for the byline, the standing rules from `list_notes`,
+     and the record through `search_me`.
+
+   Ask only if none of them says who the author is.
+2. **Build:** follow `.claude/commands/new-audit.md` through the fact-check,
+   with `npm run status` as the checklist. As soon as `npm run new` makes the
+   prep key, send the author their prep link (`?prep=<PREP_KEY>`), so it
    survives a session that ends early. Then run `npm run logos`,
    `npm run check` and `npm run verify:share`, and commit and push.
-3. **Ship, when the message asks:** open a pull request and merge it into
-   `main`. Deploy `main` with the Railway connector: `create-project`,
-   `create-deployment` from this repo, `generate-domain`, and no variables.
-   Then run `npm run deployed -- <url>`, and get that commit onto `main` the
-   same way. With no connector, or if Railway can't see the repo, give the
-   author the three dashboard steps from the README.
-4. **Report:** the playbook's summary and fact-check table, the live URL, and
-   **the prep key**. This session's container is temporary: `.env.local` (the
-   key) and `content/prep.ts` go with it. Give the author `PREP_KEY` and their
-   unlock link (`<url>/?prep=<PREP_KEY>`), and tell them to save the key in
-   their password manager. Nothing else holds it.
+3. **Ship**, when the message says so:
+   - open a pull request and merge it into `main`;
+   - deploy `main` with the Railway connector (`create-project`,
+     `create-deployment` from this repo, `generate-domain`; no variables);
+   - run `npm run deployed -- <url>` and get that commit onto `main` the same
+     way.
 
-**A later session on an audit that's already built:** the prep is sealed and
-its key isn't here. If the work touches prep, ask the author for the key, then
-run `npm run prep:init -- --key <PREP_KEY>`. That saves the key and restores
-`content/prep.ts`. Without a key, `prep:init` refuses, because a new key would
+   With no connector, or if Railway can't see the repo, give the author the
+   three dashboard steps from the README.
+4. **Report, links first.** The site, then the prep link
+   (`<url>/?prep=<PREP_KEY>`), with one line: save it in your password
+   manager; it's the only key to your prep, and this session's copy goes when
+   the session ends. Then the playbook's summary and fact-check table.
+
+**A later session on a built audit** (a second round, fresh news): do what the
+message asks. Prep is sealed and its key isn't here. If the work touches prep,
+use the prep link or key from the message, or ask for it, and run
+`npm run prep:init -- --key <link or key>`. That saves the key and restores
+`content/prep.ts`. Plain `prep:init` refuses there, because a new key would
 lock the sealed prep away for good.
 
 ## Where things live
@@ -86,7 +94,7 @@ npm run new -- --company "Acme" --domain acme.com --jd <URL>   # start an audit 
 npm run status        # the checklist from setup to deploy, and the next step
 npm run jd -- <URL>   # is the role still on the careers index? (--save writes content/jd.md)
 npm run prep:init     # once: content/prep.ts from the example, and PREP_KEY (the only key) in .env.local
-npm run prep:init -- --key <PREP_KEY>  # a new session on a built audit: bring the key back, restore content/prep.ts
+npm run prep:init -- --key <link or key>  # a new session on a built audit: bring the key back, restore content/prep.ts
 npm run validate      # schemas, labels, source ids, cross-references, dates, JD quotes
 npm run logos         # icons into public/logos, the accent, and the favicon/link-preview PNGs (commit the output)
 npm run dev           # http://localhost:3000 — seals prep first and prints the ?prep=<PREP_KEY> link
@@ -100,7 +108,7 @@ npm run author:save   # save your byline and author.md as the profile every new 
 npm run template:update  # pull the template's improvements into this audit
 ```
 
-`/new-audit <Company> <domain> <JD URL>` runs the research playbook below and
+`/new-audit <job link>` runs the research playbook below and
 fills `content/`. **When unsure what's next, run `npm run status`.** A real
 audit must end with nothing left of the fictional example (Northwind: `nw-`
 source ids, `.example` domains); `status` and `verify:share` both check.

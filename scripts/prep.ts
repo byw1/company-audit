@@ -1,9 +1,9 @@
 /**
  * npm run prep:init   — start your private prep: copy the example to content/prep.ts
  *                       (gitignored) and put a PREP_KEY in .env.local.
- *                       --key <PREP_KEY> brings an audit's key back to a fresh
- *                       checkout (a new cloud session, another machine): it saves
- *                       the key and restores content/prep.ts from the sealed file.
+ *                       --key <PREP_KEY or prep link> brings an audit's key back to
+ *                       a fresh checkout (a new cloud session, another machine): it
+ *                       saves the key and restores content/prep.ts from the sealed file.
  *                       Once prep is sealed, init never makes a new key.
  * npm run prep:seal   — validate content/prep.ts and encrypt it with PREP_KEY into
  *                       content/prep.sealed.json, the only form that's committed.
@@ -33,10 +33,21 @@ const [cmd = "seal", ...flags] = process.argv.slice(2);
 const has = (f: string) => flags.includes(f);
 const flag = (f: string) => (flags.includes(f) ? flags[flags.indexOf(f) + 1] : undefined);
 
+/** A key as given: bare, or inside a prep link (…/?prep=<key>). */
+function keyFrom(value: string | undefined) {
+  const v = value?.trim();
+  if (!v || !v.includes("prep=")) return v || undefined;
+  try {
+    return new URL(v).searchParams.get("prep") ?? undefined;
+  } catch {
+    return decodeURIComponent(v.match(/prep=([^&#\s]+)/)?.[1] ?? "") || undefined;
+  }
+}
+
 async function init() {
   const sealed = readSealed();
-  const given = flag("--key")?.trim();
-  if (has("--key") && !given) throw new Error("Usage: npm run prep:init -- --key <PREP_KEY>");
+  const given = keyFrom(flag("--key"));
+  if (has("--key") && !given) throw new Error("Usage: npm run prep:init -- --key <PREP_KEY or prep link>");
   // Prep is already sealed: this checkout needs that key back, never a new one.
   if (isSealed(sealed)) return restore(given ?? readEnvLocal().PREP_KEY);
 

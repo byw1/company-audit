@@ -1,6 +1,6 @@
 ---
 description: Research a company and fill content/ for a new outside-in audit
-argument-hint: <Company> <domain> <JD URL>
+argument-hint: <job link> [anything you know]
 ---
 
 # New audit: $ARGUMENTS
@@ -32,11 +32,12 @@ the files, so you can stop and resume at any point.
   site and makes my prep key. If it says the role isn't on the careers
   index, stop and tell me.
 - Read `content/author.md`. If it still has the template's placeholder
-  comments, fill it in from what my message says about me: my rules, and
-  where my evidence lives. Set `author` (name, email, LinkedIn) in
-  `content/audit.config.ts` too. Ask only for what the message doesn't say.
-  On my own machine, `npm run author:save` keeps them for the next audit; a
-  cloud session can't, so the message carries them each time.
+  comments, fill it and `author` (name, email, LinkedIn) in
+  `content/audit.config.ts` from the first source that knows me: my message,
+  or a career workspace connected to you (Hired: `get_me_snapshot` with
+  `only: "profile"`, the standing rules in `list_notes`, my record through
+  `search_me`). Ask only if neither does. On my own machine,
+  `npm run author:save` keeps them for the next audit.
 - In `content/audit.config.ts`:
   - check what `new` filled in (team, location), and set `researched` to this
     month if the research runs over;
@@ -216,6 +217,6 @@ Then report back with:
    host. With the Railway connector: `create-project`, `create-deployment`
    from the repo, `generate-domain`, then `npm run deployed -- <url>`. From a
    terminal: `npm run deploy:railway`. Cloudflare: `npm run deploy:cf`.
-5. **My prep key** (`PREP_KEY` from `.env.local`) and my unlock link,
-   `<url>/?prep=<PREP_KEY>`. Tell me to save the key in my password manager:
-   a cloud session's container is temporary, and nothing else holds it.
+5. **My prep link**, `<url>/?prep=<PREP_KEY>` (the key is in `.env.local`).
+   Tell me to save it in my password manager: a cloud session's container is
+   temporary, and nothing else holds the key.

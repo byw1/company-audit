@@ -27,61 +27,45 @@ Yours will be a long random key.
 
 ## Make one
 
-1. **Use this template** (the green button at the top of this page) →
-   **Create a new repository**, named for the company: `acme-audit`.
-2. Open [Claude Code](https://claude.ai/code), select the new repo, and paste
-   this, filled in:
+1. **Use this template** (top of this page) → **Create a new repository**,
+   e.g. `acme-audit`.
+2. Open [Claude Code](https://claude.ai/code), pick that repo, and paste:
 
    ```text
-   Build my audit site in this repo, start to finish.
-
-   Company: Acme (acme.com)
-   Job: https://jobs.ashbyhq.com/acme/1234
-   Context: second round with the COO next week; they care about margins
-
-   About me: Jane Doe · jane@example.com · https://www.linkedin.com/in/janedoe
-   My rules: never call me an engineer; no phone number
-   My record: my resume is pasted below (or: it's in my Hired workspace)
-
-   When it's done, open a pull request, merge it to main, deploy it on
-   Railway, and give me the site link, my prep link and my prep key.
+   Build and ship: <job link>
    ```
 
-3. **Save the prep key** it gives you in your password manager. Nothing else
-   holds it.
+   Add anything you know on the same line, like who you're meeting or the
+   stage.
+3. **Save the prep link** it gives you. It's the only key to your prep notes.
 
-Claude researches the company and writes every page, with each claim
-labelled. It writes your prep and seals it, and a separate fact-check pass
-reviews every claim. Then it proves nothing private leaks and deploys the
-site. You don't configure anything.
+That's it. Claude researches the company and writes the site, with every
+claim labelled. It writes your prep and seals it, fact-checks everything,
+proves nothing private leaks, and deploys it. There's nothing to configure.
 
-Only `Company` and `Job` are needed; leave out what you don't have. Context,
-rules and your record make it better. With no record, the prep lists what it
-couldn't back up as gaps rather than inventing anything.
+**Who you are.** If a career workspace like Hired is connected to Claude,
+your name, rules and record come from there. If not, add a line to the
+prompt: `Me: name, email, LinkedIn`. Or fill in `content/author.md` once in
+your own copy of this template, and make every audit from that copy.
 
-**The first time,** check three things:
-- Claude's GitHub app can see the new repo. It can if you installed it for all
-  your repositories.
-- Your Claude Code environment's network access reaches the open web, for the
-  research.
-- The Railway connector is connected in Claude, so it can deploy for you.
-  Without it, Claude gives you the [three clicks](#railway) instead.
+**Coming back** (a second round, fresh news): open the repo in Claude Code
+and say what to change. If it touches your prep, paste your prep link too.
 
-**Later** (a second round, fresh news): open the repo in Claude Code again
-and say what to change. If it touches your prep, include your prep key.
+**If something stops it:**
+- Claude's GitHub app needs to see the new repo.
+- The Claude Code environment needs open web access, for the research.
+- The Railway connector does the deploy. Without it, Claude gives you
+  [three clicks](#railway) instead.
 
 ### Other ways to run it
 
 - **Claude Code on your own machine:** clone the new repo, run `npm install`
-  and `claude`, and paste the same prompt. `npm run author:save` keeps your
-  byline and rules for every audit after.
-- **claude.ai, with the skill:** download `company-audit-skill.zip` from the
-  [latest release](https://github.com/byw1/company-audit/releases), upload it
-  under Settings → Capabilities → Skills, then ask
-  `/company-audit Acme acme.com <job link>`.
+  and `claude`, and paste the same line.
+- **claude.ai, with the skill:** upload `company-audit-skill.zip` from the
+  [latest release](https://github.com/byw1/company-audit/releases) under
+  Settings → Capabilities → Skills, then ask `/company-audit <job link>`.
 - **By hand:** everything company-specific is in `content/`, and
-  `npm run status` says what to do next. `CLAUDE.md` holds the rules;
-  `.claude/commands/new-audit.md` is the research playbook.
+  `npm run status` says what to do next.
 
 ## How prep stays private in a public repo
 
