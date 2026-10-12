@@ -1,6 +1,6 @@
 ---
 name: company-audit
-description: Build an outside-in audit site for a job interview — one company, read through one role — from the open-source company-audit template. Use when someone wants to research a company for an interview, "make an audit site", prep for an interview with a site they can share, says "/company-audit <Company> <domain> <JD URL>", or wants to resume or deploy an audit they've started. Creates the repo, researches the company with every claim sourced and labelled, writes encrypted interview prep, fact-checks it, and deploys it with no variables to set.
+description: Build an outside-in audit site for a job interview — one company, read through one role — from the open-source company-audit template. Use when someone wants to research a company for an interview, "make an audit site", prep for an interview with a site they can share, says "/company-audit <job link>", or wants to resume or deploy an audit they've started. Creates the repo, researches the company with every claim sourced and labelled, writes encrypted interview prep, fact-checks it, and deploys it with no variables to set.
 ---
 
 # company-audit
@@ -22,13 +22,14 @@ rules and the research playbook. This skill gets you into a copy of it.
   ```
 
   Can't run commands here (claude.ai, say)? Ask the person to click **Use this
-  template** on github.com/byw1/company-audit, then open the new repo in
-  Claude Code and paste the prompt from its README. That's the whole job here.
+  template** on github.com/byw1/company-audit, open the new repo in Claude
+  Code, and paste `Build and ship: <job link>`. That's the whole job here.
 
 ## 2. Build it
 
-Read the repo's `CLAUDE.md` and follow **Start here**. It takes the company,
-the job and the person from the message, runs the research playbook
+Read the repo's `CLAUDE.md` and follow **Start here**. It works out the
+company from the job link and the person from the message or their connected
+career workspace, runs the research playbook
 (`.claude/commands/new-audit.md`), fact-checks, proves nothing private leaks,
 and ships. `npm run status` is the checklist throughout, and a new session
 picks up from its "Next".
@@ -39,9 +40,9 @@ lives. Never use resumes they've already sent as evidence.
 
 ## 3. Report back
 
-What **Start here** lists: the summary, the fact-check table, open gaps, the
-live URL, and the prep key with its unlock link. The key matters most: it's
-the only way into their prep, and nothing else holds it.
+What **Start here** lists, links first: the live site, and the prep link
+(`<url>/?prep=<PREP_KEY>`). The prep link matters most: it's the only key to
+their prep, and nothing else holds it. Then the summary and fact-check table.
 
 Before the interview, `npm run jd -- <posting URL>` re-checks that the role is
 still listed.
