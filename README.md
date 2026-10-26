@@ -57,6 +57,22 @@ and say what to change. If it touches your prep, paste your prep link too.
 - The Railway connector does the deploy. Without it, Claude gives you
   [three clicks](#railway) instead.
 
+### After it's built
+
+Open the repo in Claude Code again and ask:
+
+- **"Refresh"** before you send it again: checks the role is still listed,
+  looks for news since the research, and updates stale numbers.
+- **"Send it to Jane"**: drafts the email and LinkedIn note, with a link that
+  greets her by name.
+- **"Who's read it?"**: which chapters each person opened, from the host's
+  logs. Each view logs the page and the name on the link, and nothing else:
+  no IP address, no tracking.
+- **"Wind it down"** when the process ends: takes the site down and records
+  the outcome.
+
+Every site also offers itself as one PDF, for people who won't click a link.
+
 ### Other ways to run it
 
 - **Claude Code on your own machine:** clone the new repo, run `npm install`

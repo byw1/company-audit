@@ -49,7 +49,7 @@ const rule = (group) => [
 
 const config = [
   {
-    ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts", ".lighthouseci/**", ".verify/**", ".open-next/**", ".wrangler/**"],
+    ignores: [".next/**", "node_modules/**", "public/**", "next-env.d.ts", ".lighthouseci/**", ".verify/**", ".open-next/**", ".wrangler/**", ".audits/**"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {

@@ -11,6 +11,7 @@ import { mono, sans, serif } from "@/lib/fonts";
 import { audit, chapters, researchedLabel } from "@/lib/content";
 import { ModeProvider } from "@/lib/mode";
 import { getView } from "@/lib/view";
+import pdfJson from "@/content/generated/pdf.json";
 
 const { company, role, author } = audit.config;
 
@@ -80,6 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             author={author}
             researched={researchedLabel}
             fictional={company.fictional}
+            pdf={(pdfJson as { file?: string | null }).file ?? null}
             mark={<FramedMark />}
             chapters={chapters.map(({ id, href, label, kicker }) => ({ id, href, label, kicker }))}
               legend={<ClaimLegend />}

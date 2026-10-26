@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import auditConfig from "@/content/audit.config";
 import { COOKIE, holds, unlock } from "@/lib/prep/gate";
+import { cleanName, FOR_COOKIE } from "@/lib/recipient";
 
 /**
  * Two views. The public one is the default, so a forwarded link can never
@@ -54,11 +55,24 @@ export async function middleware(req: NextRequest) {
     return new NextResponse("Not found", { status: 404, headers: { "content-type": "text/plain" } });
   }
 
+  // A personal link (?for=jane) names the recipient; a cookie keeps the name
+  // for the rest of their visit. Nothing else about the visitor is stored.
+  const named = cleanName(url.searchParams.get("for"));
+  const forName = named ?? cleanName(req.cookies.get(FOR_COOKIE)?.value);
+
   // Overwrite rather than trust anything a client sent under these names.
   const headers = new Headers(req.headers);
   headers.set("x-audit-prep-allowed", prepAllowed ? "1" : "0");
   headers.set("x-audit-view", view);
+  headers.set("x-audit-for", forName ?? "");
   const res = NextResponse.next({ request: { headers } });
+  if (named) res.cookies.set(FOR_COOKIE, named, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 30, path: "/" });
+
+  // One line per page view, for the host's logs (`npm run views` explains
+  // reading them): the page, the recipient if named, and the view. No IP, no
+  // user agent, no identifier.
+  const isPage = req.method === "GET" && !req.headers.get("rsc") && (req.headers.get("accept") ?? "").includes("text/html");
+  if (isPage) console.log(JSON.stringify({ audit_view: url.pathname, for: forName, view, at: new Date().toISOString() }));
   // The page differs by view, so no shared cache may ever hand one to the other.
   res.headers.set("Cache-Control", "private, no-store");
   res.headers.set("Vary", "Cookie");

@@ -39,12 +39,16 @@ this template**, opened in its own session.
      and the record through `search_me`.
 
    Ask only if none of them says who the author is.
-2. **Build:** follow `.claude/commands/new-audit.md` through the fact-check,
-   with `npm run status` as the checklist. As soon as `npm run new` makes the
+2. **Build:** `npm run preflight` first, then follow
+   `.claude/commands/new-audit.md` through the fact-check, with
+   `npm run status` as the checklist and `npm run status -- --save` committed
+   after each step. As soon as `npm run new` makes the
    prep key, send the author their prep link (`?prep=<PREP_KEY>`), so it
    survives a session that ends early. Then run `npm run logos`,
    `npm run check` and `npm run verify:share`, and commit and push.
-3. **Ship**, when the message says so:
+3. **Ship**, when the message says so. `npm run pdf` first, and commit the
+   PDF. `npm run ship` says which step is next at any point, so a ship that
+   broke halfway resumes rather than restarts:
    - open a pull request and merge it into `main`;
    - deploy `main` with the Railway connector (`create-project`,
      `create-deployment` from this repo, `generate-domain`; no variables);
@@ -53,14 +57,39 @@ this template**, opened in its own session.
 
    With no connector, or if Railway can't see the repo, give the author the
    three dashboard steps from the README.
+
+   If the message names a domain (`on acme.example.com`), add it with
+   `generate-domain` and that domain, put the DNS records it returns in place
+   (with the Namecheap connector if the domain is there; otherwise give them
+   to the author), and record the custom URL with `npm run deployed`.
+
+   With Hired connected, put the site link on the application for this
+   company and role (`list_applications`, then `update_application`;
+   `create_application` if there isn't one), so Hired lists every audit.
 4. **Report, links first.** The site, then the prep link
    (`<url>/?prep=<PREP_KEY>`), with one line: save it in your password
    manager; it's the only key to your prep, and this session's copy goes when
-   the session ends. Then the playbook's summary and fact-check table.
+   the session ends. Then the message to send with the link
+   (`npm run note`), then the playbook's summary and fact-check table.
 
 **A later session on a built audit** (a second round, fresh news): do what the
-message asks. Prep is sealed and its key isn't here. If the work touches prep,
-use the prep link or key from the message, or ask for it, and run
+message asks. The usual asks:
+
+- **"Carry on"**: read PROGRESS.md and `npm run status`, then finish the
+  build or `npm run ship`.
+- **"Refresh"**: `npm run refresh`, then work through `research/refresh.md`
+  (news since the research month, stale sources, the role still listed).
+- **"Who's read it?"**: read the service's logs with the Railway connector
+  (`get-logs`, filtered to `audit_view`), save them, and `npm run views`.
+- **"Send it to Jane"**: `npm run note -- --for Jane`. Her link greets her by
+  name and her visits show in the logs.
+- **"Wind it down"** (the process has ended): with the author's go-ahead,
+  delete the Railway service (`delete-service`), record the outcome on the
+  Hired application, and tell the author they can make the repo private
+  under GitHub → Settings.
+
+Whatever the ask, prep is sealed and its key isn't here. If the work touches
+prep, use the prep link or key from the message, or ask for it, and run
 `npm run prep:init -- --key <link or key>`. That saves the key and restores
 `content/prep.ts`. Plain `prep:init` refuses there, because a new key would
 lock the sealed prep away for good.
@@ -84,6 +113,8 @@ lock the sealed prep away for good.
 | `content/prep.example.ts` | The shape of `prep.ts`, with a fictional example. `npm run prep:init` copies it to start. |
 | `content/fit.ts` | Optional: JD requirement → my evidence |
 | `content/jd.md` | The job description text, saved when the role was confirmed live |
+| `research/` | Working material the site never reads: the hiring board, SEC figures, source snapshots, the refresh checklist, the note to send. Committed, so a later session has it. |
+| `PROGRESS.md` | Where the build is, from `npm run status -- --save`. |
 | `lib/schema/` | Zod schemas and cross-file checks. `prep.ts` is separate and private. |
 | `app/`, `components/`, `lib/` | The framework. Don't edit these for an audit; improve the template instead. |
 
@@ -91,7 +122,16 @@ lock the sealed prep away for good.
 
 ```bash
 npm run new -- --company "Acme" --domain acme.com --jd <URL>   # start an audit from a fresh template copy
-npm run status        # the checklist from setup to deploy, and the next step
+npm run status        # the checklist from setup to deploy, a quality report, and the next step (--save: PROGRESS.md)
+npm run preflight     # before a build: push access, web access, a browser
+npm run ship          # how far shipping got, and the next step (--check tests the live site)
+npm run research:hiring   # every open role on the company's board, by team → research/
+npm run research:sec      # public companies: revenue and filings from EDGAR → research/
+npm run research:sources  # a dated text copy of every source → research/sources/
+npm run refresh       # role still listed? which sources are stale? → research/refresh.md
+npm run note -- [--for <name>]  # draft the email and LinkedIn note that go with the link
+npm run pdf           # the whole site as public/audit.pdf
+npm run views -- <log file>  # who read which chapters, from the host's audit_view log lines
 npm run jd -- <URL>   # is the role still on the careers index? (--save writes content/jd.md)
 npm run prep:init     # once: content/prep.ts from the example, and PREP_KEY (the only key) in .env.local
 npm run prep:init -- --key <link or key>  # a new session on a built audit: bring the key back, restore content/prep.ts
@@ -106,6 +146,7 @@ npm run deploy:cf     # or Cloudflare Workers (after `npx wrangler login`); also
 npm run deployed -- <url>  # record and check a deploy made from GitHub (Railway dashboard or connector)
 npm run author:save   # save your byline and author.md as the profile every new audit starts with
 npm run template:update  # pull the template's improvements into this audit
+npm run template:update-all -- owner/a owner/b  # the same across several audits, a branch each
 ```
 
 `/new-audit <job link>` runs the research playbook below and

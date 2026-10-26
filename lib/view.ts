@@ -6,6 +6,8 @@ export interface View {
   prepAllowed: boolean;
   /** Render the public view. True for everyone without the key, and for key holders previewing with ?share. */
   share: boolean;
+  /** The recipient's name from a personal link (?for=jane), or null. */
+  forName: string | null;
 }
 
 /** Server-side view, as decided by middleware.ts. Defaults to the public view. */
@@ -13,5 +15,5 @@ export async function getView(): Promise<View> {
   const h = await headers();
   const prepAllowed = h.get("x-audit-prep-allowed") === "1";
   const share = h.get("x-audit-view") !== "prep";
-  return { prepAllowed, share };
+  return { prepAllowed, share, forName: h.get("x-audit-for") || null };
 }

@@ -174,3 +174,61 @@ export function jdMarkdown(p: Posting, company: string, checked: string) {
     "",
   ].join("\n");
 }
+
+export interface BoardJob {
+  title: string;
+  team: string;
+  location?: string;
+  published?: string;
+  url?: string;
+}
+
+/** The board a posting URL lives on, for listing every open role. */
+export function boardOf(url: string): { board: "ashby" | "greenhouse" | "lever"; org: string } | null {
+  const u = new URL(url);
+  const parts = u.pathname.split("/").filter(Boolean);
+  if (u.hostname === "jobs.ashbyhq.com" && parts[0]) return { board: "ashby", org: parts[0] };
+  if (/(^|\.)greenhouse\.io$/.test(u.hostname)) {
+    const org = u.searchParams.get("for") ?? parts[0];
+    if (org) return { board: "greenhouse", org };
+  }
+  if (u.hostname === "jobs.lever.co" && parts[0]) return { board: "lever", org: parts[0] };
+  return null;
+}
+
+/** Every open role on the company's public board (Ashby, Greenhouse or Lever). */
+export async function listBoard(url: string): Promise<{ indexUrl: string; jobs: BoardJob[] } | null> {
+  const b = boardOf(url);
+  if (!b) return null;
+  if (b.board === "ashby") {
+    const r = await json<{ jobs: { title: string; department?: string; team?: string; location?: string; publishedAt?: string; jobUrl?: string }[] }>(
+      `https://api.ashbyhq.com/posting-api/job-board/${b.org}`,
+    );
+    return {
+      indexUrl: `https://jobs.ashbyhq.com/${b.org}`,
+      jobs: r.jobs.map((j) => ({ title: j.title, team: j.department ?? j.team ?? "Other", location: j.location, published: day(j.publishedAt), url: j.jobUrl })),
+    };
+  }
+  if (b.board === "greenhouse") {
+    const r = await json<{ jobs: { title: string; absolute_url?: string; location?: { name?: string }; updated_at?: string; departments?: { name: string }[] }[] }>(
+      `https://boards-api.greenhouse.io/v1/boards/${b.org}/jobs?content=true`,
+    );
+    return {
+      indexUrl: `https://job-boards.greenhouse.io/${b.org}`,
+      jobs: r.jobs.map((j) => ({ title: j.title, team: j.departments?.[0]?.name ?? "Other", location: j.location?.name, published: day(j.updated_at), url: j.absolute_url })),
+    };
+  }
+  const r = await json<{ text: string; hostedUrl?: string; createdAt?: number; categories?: { team?: string; department?: string; location?: string } }[]>(
+    `https://api.lever.co/v0/postings/${b.org}?mode=json`,
+  );
+  return {
+    indexUrl: `https://jobs.lever.co/${b.org}`,
+    jobs: r.map((j) => ({
+      title: j.text,
+      team: j.categories?.department ?? j.categories?.team ?? "Other",
+      location: j.categories?.location,
+      published: j.createdAt ? day(new Date(j.createdAt).toISOString()) : undefined,
+      url: j.hostedUrl,
+    })),
+  };
+}

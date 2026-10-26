@@ -21,7 +21,7 @@ function files(dir: string, out: string[] = []): string[] {
  * only through the sealed file) and not the status markers themselves.
  */
 export function contentFingerprint() {
-  const skip = /content\/(prep\.ts|factcheck\.md|generated\/(brand|deploy)\.json)$/;
+  const skip = /content\/(prep\.ts|factcheck\.md|generated\/(brand|deploy|pdf)\.json)$/;
   const list = files(path.join(ROOT, "content")).filter((f) => !skip.test(f));
   return sha(list.map((f) => `${path.relative(ROOT, f)}\n${readFileSync(f, "utf8")}`).join("\n\u0000"));
 }

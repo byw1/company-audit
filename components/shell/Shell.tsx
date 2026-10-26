@@ -24,6 +24,8 @@ export interface ShellProps {
   author: { name: string; email: string; linkedin: string };
   researched: string;
   fictional: boolean;
+  /** public/audit.pdf from `npm run pdf`, if there is one; otherwise the browser prints. */
+  pdf: string | null;
   /** The framed company mark, rendered on the server. */
   mark: ReactNode;
   chapters: ShellChapter[];
@@ -41,10 +43,10 @@ const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 export default function Shell(props: ShellProps) {
-  const { company, role, author, researched, fictional, mark, chapters, legend, prep, children } = props;
+  const { company, role, author, researched, fictional, pdf, mark, chapters, legend, prep, children } = props;
   const pathname = usePathname();
   const router = useRouter();
-  const { share, prepAllowed } = useMode();
+  const { share, prepAllowed, forName } = useMode();
   const [open, setOpen] = useState(false);
   const [paletteUsed, setPaletteUsed] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -201,6 +203,12 @@ export default function Shell(props: ShellProps) {
         An outside-in read of <span className="font-medium text-ink">{company}</span> for the {role} role, by {author.name} · {researched}
       </div>
 
+      {forName && (
+        <div className="mx-auto w-full max-w-[1320px] px-4 pt-3 text-[12.5px] text-ink-3 sm:px-6 lg:px-8">
+          Prepared for <span className="font-medium text-ink-2">{forName}</span>
+        </div>
+      )}
+
       <main id="main" className="min-h-[70vh]">
         {children}
       </main>
@@ -225,9 +233,15 @@ export default function Shell(props: ShellProps) {
               <div className="mt-5">{legend}</div>
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
-              <button type="button" onClick={() => window.print()} className="no-print text-ink-2 hover:text-ink">
-                Save as PDF
-              </button>
+              {pdf ? (
+                <a href={pdf} download className="no-print text-ink-2 hover:text-ink">
+                  Download PDF
+                </a>
+              ) : (
+                <button type="button" onClick={() => window.print()} className="no-print text-ink-2 hover:text-ink">
+                  Save as PDF
+                </button>
+              )}
               <button type="button" onClick={() => setPresenting(true)} className="no-print text-ink-2 hover:text-ink" title="Presenter mode (P)">
                 Present
               </button>

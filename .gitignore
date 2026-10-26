@@ -19,6 +19,9 @@ content/prep.ts
 .lighthouseci
 .verify
 
+# audits cloned by template:update-all
+.audits
+
 # os / editors
 .DS_Store
 .vercel

@@ -16,7 +16,10 @@ except `generated/` and `prep.sealed.json` (`prep.ts` is the plain version).
 For every **sourced** claim (`sourced()`, `quote()`, a `stat()` built on
 one), and every source a `read()` cites:
 
-1. Look up its source ids in `content/sources.ts` and fetch each URL.
+1. Look up its source ids in `content/sources.ts` and fetch each URL. If a
+   page won't load or has changed, read its dated copy in
+   `research/sources/<id>.md` (from `npm run research:sources`) and say which
+   you used.
 2. Find the passage that supports the claim, and quote it exactly, short.
 3. Check:
    - **Support.** Does the passage say what the claim says, no more?

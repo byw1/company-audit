@@ -25,6 +25,14 @@ the files, so you can stop and resume at any point.
 
 ## 0. Set up
 
+- `npm run preflight` first. It checks push access, web access and the
+  browser in under a minute; fix anything it marks ✗ before researching.
+  Check your own tools too: if the message asks to ship, the Railway connector
+  should be among them.
+- After each numbered step below: `npm run status -- --save`, then commit
+  PROGRESS.md with the step's files and push. A session that ends early
+  carries on from there ("Carry on" in a new session reads PROGRESS.md).
+
 - If `content/audit.config.ts` is still the fictional example, run:
   `npm run new -- --company "<Company>" --domain <domain> --jd <JD URL>`.
   It fetches the posting, checks the careers index, saves `content/jd.md` and
@@ -69,6 +77,23 @@ board (or to re-check later, `npm run jd -- <URL> --save`):
 - Add it to `sources.ts` as id `jd`, kind `job-posting`, with `accessed` set to
   today and a `note` saying it was confirmed on the index.
 
+## Steps 2 to 4, in parallel
+
+The company, the public record and the competitors don't depend on each
+other. Research them at the same time with three subagents (the Agent tool),
+each told the content rules in CLAUDE.md and asked to return facts with their
+source URL, title, publisher and publication date, not to write files. You
+then write `sources.ts` once, with ids, and the three content files from what
+they bring back. Workflows and ideas need all three, so they come after.
+
+Run the research helpers first; their output in `research/` is for you and
+the subagents, never cited itself:
+
+- `npm run research:hiring`: every open role on the company's board, by team.
+- `npm run research:sec` (public companies, `company.ticker` set): reported
+  revenue straight from the 10-K, exact figures, and recent filings with
+  links. Cite the filing.
+
 ## 2. The company → `company.ts`, `role.ts`
 
 Company sites built as client-side apps return an empty shell to a plain
@@ -104,8 +129,9 @@ size, who the role reports to).
   blog posts.
 - Exec interviews and podcasts from the last 18 months. Recent press.
 - Their open roles, read as signals of where they're investing (what's being
-  hired, how many, which team, when). Each goes in `hiring` with the careers
-  page as its source.
+  hired, how many, which team, when). `research/hiring.md` has the whole
+  board by team: the biggest teams and the role's own team go in `hiring`,
+  with the careers board as the source, accessed the day it was read.
 - Each item: `said` (a verbatim `quote()` or a sourced paraphrase) → `implies`
   (a `read()` about what it means for **this role**). Quotes must be word for
   word. If you can't find the exact words, paraphrase with `sourced()`.
@@ -113,7 +139,9 @@ size, who the role reports to).
 ## 4. Competitors → `competitors.ts`
 
 - Four to eight **real** competitors, the ones this company actually loses deals
-  or talent or supply to. Not a market map.
+  or talent or supply to. Not a market map. Start from who the company itself
+  names: the 10-K's Item 1 "Competition" section (`research/sec.md` links it),
+  an S-1, or its own comparison pages and press. Search results come after.
 - Pick two axes that matter for this business and this role. `self` places the
   company on the same axes.
 - For each competitor:
@@ -191,6 +219,11 @@ supports each sourced claim, rating each one:
 Then fix every BLOCKER and FIX. Pull back anything unsupported, or relabel it
 as a `read()` if it's honestly an inference.
 
+Before the fact-check, `npm run research:sources` saves a dated text copy of
+every source in `research/sources/`. Commit it: the fact-checker reads those
+when a page has changed or gone, and a later session can check claims
+without the live web.
+
 ## Finish
 
 ```bash
@@ -198,7 +231,8 @@ npm run logos          # icons, the accent, and the favicon/link-preview images;
 npm run prep:seal      # encrypt content/prep.ts; commit content/prep.sealed.json
 npm run check
 npm run verify:share   # must pass
-npm run status         # everything above "Deployed" is ✓
+npm run status         # everything above "Deployed" is ✓, and no Quality flags you can't explain
+npm run pdf            # the whole site as public/audit.pdf (commit it; the deploy offers it)
 ```
 
 On my machine, `npm run dev` and read every page once in the share view. In a

@@ -13,6 +13,7 @@ import {
 interface Mode {
   share: boolean;
   prepAllowed: boolean;
+  forName?: string | null;
 }
 
 const ModeCtx = createContext<Mode>({ share: true, prepAllowed: false });
