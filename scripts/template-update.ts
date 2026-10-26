@@ -14,7 +14,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const REPO = process.env.TEMPLATE_REPO ?? "https://github.com/byw1/company-audit.git";
-const OURS = ["content", "public/logos", "app/icon.png", "app/apple-icon.png", "app/opengraph-image.png", "app/opengraph-image.alt.txt", "wrangler.jsonc"];
+const OURS = ["content", "research", "PROGRESS.md", "public/logos", "public/audit.pdf", "app/icon.png", "app/apple-icon.png", "app/opengraph-image.png", "app/opengraph-image.alt.txt", "wrangler.jsonc"];
 
 function git(args: string[], opts: { allowFail?: boolean } = {}) {
   const r = spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
